@@ -4,6 +4,7 @@ BASE_ADDRESS = 0x80200000;
 
 SECTIONS
 {
+/*  . means current address  */
     . = BASE_ADDRESS;
     skernel = .;
 
