@@ -3,7 +3,10 @@ name = "os"
 version = "0.1.0"
 edition = "2021"
 
-[dependencies]
-# temp attempt of RustSBI
-sbi-rt = { version = "0.0.3", features = ["legacy"] }
+#[dependencies]
+## temp attempt of RustSBI
+#sbi-rt = { version = "0.0.3", features = ["legacy"] }
 
+[dependencies]
+volatile = "0.5.2"
+bitflags = "2.5.0"
