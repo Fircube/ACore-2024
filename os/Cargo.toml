@@ -10,3 +10,6 @@ edition = "2021"
 [dependencies]
 volatile = "0.5.2"
 bitflags = "2.5.0"
+lazy_static = { version = "1.4.0", features = ["spin_no_std"] }
+buddy_system_allocator = "0.9.1"
+riscv = { git = "https://github.com/rcore-os/riscv", features = ["inline-asm"] }

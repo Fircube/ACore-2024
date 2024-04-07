@@ -6,7 +6,7 @@ pub struct Stdout;
 
 impl Stdout {
     pub fn putchar(&self, c: char) {
-        unsafe { UART.assume_init_mut() }.send(c as u8);
+        UART.send(c as u8);
     }
 
     pub fn print(&mut self, args: fmt::Arguments) {
@@ -22,7 +22,6 @@ impl Write for Stdout {
         Ok(())
     }
 }
-
 
 
 #[macro_export]

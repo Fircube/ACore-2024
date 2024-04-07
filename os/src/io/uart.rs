@@ -1,7 +1,8 @@
 use core::sync::atomic::{AtomicPtr, Ordering};
 // use volatile::Volatile;
-use core::mem::MaybeUninit;
+use lazy_static::*;
 use bitflags::bitflags;
+use crate::config::SERIAL_PORT_BASE_ADDRESS;
 
 macro_rules! wait_for {
     ($cond:expr) => {
@@ -57,7 +58,7 @@ impl MMIOPort {
     }
 
     // Initialize the serial port.
-    pub fn init(&mut self) {
+    pub fn init(&self) {
         let rbr_thr = self.rbr_thr.load(Ordering::Relaxed);
         let ier = self.ier.load(Ordering::Relaxed);
         let iir_fcr = self.iir_fcr.load(Ordering::Relaxed);
@@ -95,12 +96,12 @@ impl MMIOPort {
         }
     }
 
-    fn line_status(&mut self) -> LineStsFlags {
+    fn line_status(&self) -> LineStsFlags {
         unsafe { LineStsFlags::from_bits_truncate(*self.lsr.load(Ordering::Relaxed)) }
     }
 
     // Sends a byte on the serial port.
-    pub fn send(&mut self, data: u8) {
+    pub fn send(&self, data: u8) {
         let rbr_thr = self.rbr_thr.load(Ordering::Relaxed);
         unsafe{
             match data {
@@ -121,7 +122,7 @@ impl MMIOPort {
     }
 
     // Receives a byte on the serial port.
-    pub fn receive(&mut self) -> u8 {
+    pub fn receive(&self) -> u8 {
         let rbr_thr = self.rbr_thr.load(Ordering::Relaxed);
         unsafe {
             wait_for!(self.line_status().contains(LineStsFlags::INPUT_FULL));
@@ -130,4 +131,6 @@ impl MMIOPort {
     }
 }
 
-pub static mut UART:MaybeUninit<MMIOPort> = MaybeUninit::uninit();
+lazy_static! {
+    pub static ref UART: MMIOPort = unsafe { MMIOPort::new(SERIAL_PORT_BASE_ADDRESS) };
+}
