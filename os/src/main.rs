@@ -6,6 +6,7 @@ extern crate alloc;
 
 mod lang_items;
 mod io;
+mod heap;
 mod mm;
 mod config;
 
