@@ -1,14 +1,18 @@
 #![no_std] // use core
 #![no_main] // no initialization of std
-#![feature(panic_info_message)]
-
+#![feature(panic_info_message,asm_const)]
+#![feature(alloc_error_handler)]
 extern crate alloc;
 
-mod lang_items;
-mod io;
-mod heap;
-mod mm;
+#[macro_use]
+extern crate bitflags;
+
 mod config;
+mod heap;
+mod io;
+mod lang_items;
+mod mm;
+mod sync;
 
 // 在 Rust 代码中直接插入汇编指令
 use core::arch::global_asm;
@@ -26,7 +30,9 @@ pub fn rust_main() {
     clear_bss();
     UART.init();
     println!("Hello, world!");
-    // panic!("Shutdown machine!");
+    heap::init_heap();
+    heap::heap_test();
+    panic!("Shutdown machine!");
 }
 
 unsafe fn rust_m2s_mode(){
@@ -35,9 +41,6 @@ unsafe fn rust_m2s_mode(){
 
     satp::write(0);// disable paging
 
-    medeleg::write(0xffff);
-    mideleg::write(0xffff);
-    // sstatus::set_sie();
     sie::set_sext(); // SEIE
     sie::set_stimer(); // STIE
     sie::set_ssoft(); // SSIE
@@ -45,11 +48,16 @@ unsafe fn rust_m2s_mode(){
     pmpaddr0::write(0x3fffffffffffffusize);
     pmpcfg0::write(0xf);
 
-
     init_timer();
 
     asm!(
+        "li t0 {medeleg}",
+        "csrw medeleg t0",
+        "li t0 {mideleg}",
+        "csrw mideleg t0",
         "mret",
+        medeleg = const 0xffff,
+        mideleg = const 0xffff,
         options(noreturn),
     );
 }

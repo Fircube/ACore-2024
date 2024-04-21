@@ -1,4 +1,3 @@
-// use crate::sbi::shutdown;
 use core::panic::PanicInfo;
 use crate::println;
 
@@ -17,3 +16,4 @@ fn panic(info: &PanicInfo) -> ! {
     // shutdown(true)
     loop {}
 }
+

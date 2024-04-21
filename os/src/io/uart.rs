@@ -12,6 +12,7 @@ macro_rules! wait_for {
     };
 }
 
+// MMIO uart port
 #[derive(Debug)]
 pub struct MMIOPort {
     // receiver buffer & transmitter holding
@@ -87,7 +88,7 @@ impl MMIOPort {
             // reset and enable FIFOs.
             iir_fcr.write(0xC7);
 
-            // Mark data terminal ready, signal request to send
+            // mark data terminal ready, signal request to send
             // and enable auxilliary output #2 (used as interrupt line for CPU)
             mcr.write(0x0B);
 

@@ -40,7 +40,7 @@ impl BuddyAllocator{
         while current_start + size_of::<usize>() <= end {
             let lowbit = current_start & (!current_start + 1);
             let num = end - current_start;
-            let size = min(lowbit, 1 << (usize::BITS as usize - num.leading_zeros() as usize - 1);
+            let size = min(lowbit, 1 << (usize::BITS as usize - num.leading_zeros() as usize - 1));
             total += size;
 
             self.free_list[size.trailing_zeros() as usize].push(current_start as *mut usize);

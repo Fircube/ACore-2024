@@ -1,4 +1,3 @@
-// use crate::sbi::console_putchar;
 use super::uart::UART;
 use core::fmt::{self, Write};
 
