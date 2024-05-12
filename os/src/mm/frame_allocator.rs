@@ -1,8 +1,31 @@
-use super::address::*;
 use alloc::vec::Vec;
-use crate::config::*;
-use crate::sync::up::UPSafeCell;
 use lazy_static::lazy_static;
+
+use crate::config::*;
+use crate::println;
+use crate::sync::up::UPSafeCell;
+use super::address::*;
+
+pub struct FrameTracker {
+    pub ppn: PhysPageNum,
+}
+
+impl FrameTracker {
+    pub fn new(ppn: PhysPageNum) -> Self {
+        let bytes_array = ppn.get_bytes_array();
+        for i in bytes_array {
+            *i = 0;
+        }
+        Self { ppn }
+    }
+}
+
+impl Drop for FrameTracker {
+    fn drop(&mut self) {
+        frame_dealloc(self.ppn);
+    }
+}
+
 
 trait FrameAllocator {
     fn new() -> Self;
@@ -16,6 +39,13 @@ pub struct StackFrameAllocator {
     //空闲内存的结束物理页号
     end: usize,
     recycled: Vec<usize>,
+}
+
+impl StackFrameAllocator {
+    pub fn init(&mut self, l: PhysPageNum, r: PhysPageNum) {
+        self.begin = l.0;
+        self.end = r.0;
+    }
 }
 
 impl FrameAllocator for StackFrameAllocator {
@@ -52,13 +82,6 @@ impl FrameAllocator for StackFrameAllocator {
     }
 }
 
-impl StackFrameAllocator {
-    pub fn init(&mut self, l: PhysPageNum, r: PhysPageNum) {
-        self.begin = l.0;
-        self.end = r.0;
-    }
-}
-
 
 type FrameAllocatorImpl = StackFrameAllocator;
 lazy_static! {
@@ -89,41 +112,21 @@ fn frame_dealloc(ppn: PhysPageNum) {
         .dealloc(ppn);
 }
 
-pub struct FrameTracker {
-    pub ppn: PhysPageNum,
-}
 
-impl FrameTracker {
-    pub fn new(ppn: PhysPageNum) -> Self {
-        let bytes_array = ppn.get_bytes_array();
-        for i in bytes_array {
-            *i = 0;
-        }
-        Self { ppn }
+#[allow(unused)]
+pub fn frame_allocator_test() {
+    let mut v: Vec<FrameTracker> = Vec::new();
+    for i in 0..5 {
+        let frame = frame_alloc().unwrap();
+        println!("{:?}", frame);
+        v.push(frame);
     }
-}
-
-
-impl Drop for FrameTracker {
-    fn drop(&mut self) {
-        frame_dealloc(self.ppn);
+    v.clear();
+    for i in 0..5 {
+        let frame = frame_alloc().unwrap();
+        println!("{:?}", frame);
+        v.push(frame);
     }
+    drop(v);
+    println!("frame_allocator_test passed!");
 }
-
-// #[allow(unused)]
-// pub fn frame_allocator_test() {
-//     let mut v: Vec<FrameTracker> = Vec::new();
-//     for i in 0..5 {
-//         let frame = frame_alloc().unwrap();
-//         println!("{:?}", frame);
-//         v.push(frame);
-//     }
-//     v.clear();
-//     for i in 0..5 {
-//         let frame = frame_alloc().unwrap();
-//         println!("{:?}", frame);
-//         v.push(frame);
-//     }
-//     drop(v);
-//     println!("frame_allocator_test passed!");
-// }

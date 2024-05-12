@@ -13,6 +13,9 @@ mod io;
 mod lang_items;
 mod mm;
 mod sync;
+mod syscall;
+mod trap;
+mod batch;
 
 // 在 Rust 代码中直接插入汇编指令
 use core::arch::global_asm;

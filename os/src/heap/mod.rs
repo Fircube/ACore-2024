@@ -1,5 +1,5 @@
-// mod buddy_allocator;
-// mod linked_list;
+mod buddy_allocator;
+mod linked_list;
 
 use buddy_system_allocator::LockedHeap;
 use crate::config::KERNEL_HEAP_SIZE;
