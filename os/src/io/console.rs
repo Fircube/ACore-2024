@@ -26,13 +26,13 @@ impl Write for Stdout {
 #[macro_export]
 macro_rules! print {
     ($fmt: literal $(, $($arg: tt)+)?) => {
-        $crate::io::stdout().print(format_args!($fmt $(, $($arg)+)?));
+        $crate::io::console::Stdout.print(format_args!($fmt $(, $($arg)+)?));
     }
 }
 
 #[macro_export]
 macro_rules! println {
     ($fmt: literal $(, $($arg: tt)+)?) => {
-        $crate::io::stdout().print(format_args!(concat!($fmt, "\n") $(, $($arg)+)?));
+        $crate::io::console::Stdout.print(format_args!(concat!($fmt, "\n") $(, $($arg)+)?));
     }
 }

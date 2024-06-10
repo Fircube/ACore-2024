@@ -6,9 +6,9 @@
 pub mod console;
 mod lang_items;
 mod syscall;
-mod lang_items;
-mod syscall;
-mod console;
+
+use syscall::*;
+
 
 #[no_mangle]
 #[link_section = ".text.entry"]
@@ -33,8 +33,6 @@ fn clear_bss() {
         (addr as *mut u8).write_volatile(0);
     });
 }
-
-use syscall::*;
 
 pub fn write(fd: usize, buf: &[u8]) -> isize {
     sys_write(fd, buf)

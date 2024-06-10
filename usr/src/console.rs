@@ -1,7 +1,7 @@
 use super::write;
 use core::fmt::{self, Write};
 
-struct Stdout;
+pub struct Stdout;
 
 const STDOUT: usize = 1;
 

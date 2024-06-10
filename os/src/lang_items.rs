@@ -5,7 +5,7 @@ use crate::println;
 fn panic(info: &PanicInfo) -> ! {
     if let Some(location) = info.location() {
         println!(
-            "[kernel]Panicked at {}:{} {}",
+            "[kernel]Panicked at {}:{}, {}",
             location.file(),
             location.line(),
             info.message().unwrap()
