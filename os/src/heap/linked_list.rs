@@ -33,6 +33,20 @@ impl LinkedList {
         }
     }
 
+    pub fn iter(&self) -> LinkedListIter {
+        LinkedListIter {
+            curr: self.head,
+            linked_list: self,
+        }
+    }
+
+    pub fn iter_mut(&mut self) -> LinkedListMutIter {
+        LinkedListMutIter {
+            prev: &mut self.head as *mut *mut usize as *mut usize,
+            curr: self.head,
+            linked_list: self,
+        }
+    }
 }
 
 // Represent a mutable node in `LinkedList`
@@ -53,5 +67,52 @@ impl ListNode {
     // Returns the pointed address
     pub fn ptr(&self) -> *mut usize {
         self.curr
+    }
+
+    pub fn value(&self) -> usize {
+        unsafe { *self.curr }
+    }
+}
+
+pub struct LinkedListIter<'a> {
+    curr: *mut usize,
+    linked_list: &'a LinkedList,
+}
+
+impl<'a> Iterator for LinkedListIter<'a> {
+    type Item = *mut usize;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if !self.curr.is_null() {
+            let result = self.curr;
+            self.curr = unsafe { *self.curr } as *mut usize;
+            Some(result)
+        } else {
+            None
+        }
+    }
+}
+
+pub struct LinkedListMutIter<'a> {
+    prev: *mut usize,
+    curr: *mut usize,
+    linked_list: &'a mut LinkedList,
+}
+
+impl<'a> Iterator for LinkedListMutIter<'a> {
+    type Item = ListNode;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if !self.curr.is_null() {
+            let result = ListNode {
+                prev: self.prev,
+                curr: self.curr,
+            };
+            self.prev = self.curr;
+            self.curr = unsafe { *self.curr } as *mut usize;
+            Some(result)
+        } else {
+            None
+        }
     }
 }

@@ -22,6 +22,7 @@ pub fn init() {
     }
 }
 
+// 分发和处理
 #[no_mangle]
 pub fn trap_handler(cx: &mut TrapContext) -> &mut TrapContext {
     let scause = scause::read();

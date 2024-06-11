@@ -5,39 +5,47 @@ use alloc::alloc::Layout;
 
 
 pub struct BuddyAllocator {
-    free_list: [LinkedList::LinkedList; 32],
+    free_list: [LinkedList; 32],
 
     user: usize,
     allocated: usize,
     total: usize,
 }
 
-impl BuddyAllocator{
+impl BuddyAllocator {
     // Create a new heap
-    pub const fn new() -> Self {
+    pub unsafe fn new(start: usize, end: usize) -> Self {
+        let mut new_allocator = Self::empty();
+        new_allocator.add_to_heap(start, end);
+        new_allocator
+    }
+
+    // Add a range of memory [start, start+size) to the heap
+    pub unsafe fn init(&mut self, start: usize, size: usize) {
+        self.add_to_heap(start, start + size);
+    }
+
+    // Create an empty heap
+    pub const fn empty() -> Self {
         Self {
-            free_list: [LinkedList::LinkedList::new(); 32],
+            free_list: [LinkedList::new(); 32],
             user: 0,
             allocated: 0,
             total: 0,
         }
     }
 
-    // Create an empty heap
-    pub const fn empty() -> Self {
-        Self::new()
-    }
-
     // Add a range of memory [start, end) to the heap
     pub unsafe fn add_to_heap(&mut self, mut start: usize, mut end: usize) {
         // avoid unaligned access on some platforms
-        start = (start + size_of::<usize>() - 1) & (!size_of::<usize>() + 1);
-        end &= !size_of::<usize>() + 1;
+        let unit = size_of::<usize>();
+        start = (start + unit - 1) & (!unit + 1);
+        end &= !unit + 1;
 
         let mut total = 0;
         let mut current_start = start;
 
-        while current_start + size_of::<usize>() <= end {
+        while current_start < end {
             let lowbit = current_start & (!current_start + 1);
             let num = end - current_start;
             let size = min(lowbit, 1 << (usize::BITS as usize - num.leading_zeros() as usize - 1));
@@ -46,17 +54,14 @@ impl BuddyAllocator{
             self.free_list[size.trailing_zeros() as usize].push(current_start as *mut usize);
             current_start += size;
         }
-
+        assert_eq!(total, end - start, "Total is not equal to end - start!");
         self.total += total;
     }
 
-    // Add a range of memory [start, start+size) to the heap
-    pub unsafe fn init(&mut self, start: usize, size: usize) {
-        self.add_to_heap(start, start + size);
-    }
 
-    // Alloc a range of memory from the heap satifying `layout` requirements
-    pub fn alloc(&mut self, layout: Layout) -> Result<core::ptr::NonNull<u8>, ()> {
+
+    // Alloc a range of memory from the heap satisfying `layout` requirements
+    pub fn alloc(&mut self, layout: Layout) -> *mut u8 {
         let size = max(
             layout.size().next_power_of_two(),
             max(layout.align(), size_of::<usize>()),
@@ -74,7 +79,7 @@ impl BuddyAllocator{
                             self.free_list[j - 1].push(block);
                         }
                     } else {
-                        return Err(());
+                        panic!("buddy allocator: block split failed");
                     }
                 }
 
@@ -87,17 +92,17 @@ impl BuddyAllocator{
                 if let Some(result) = result {
                     self.user += layout.size();
                     self.allocated += size;
-                    return Ok(result);
+                    return result.as_ptr();
                 } else {
-                    return Err(());
+                    panic!("buddy allocator: block split failed");
                 }
             }
         }
-        Err(())
+        panic!("buddy allocator: out of memory");
     }
 
     // Dealloc a range of memory from the heap
-    pub fn dealloc(&mut self, ptr: core::ptr::NonNull<u8>, layout: Layout) {
+    pub fn dealloc(&mut self, ptr: *mut u8, layout: Layout) {
         let size = max(
             layout.size().next_power_of_two(),
             max(layout.align(), size_of::<usize>()),
@@ -106,17 +111,17 @@ impl BuddyAllocator{
 
         unsafe {
             // Put back into free list
-            self.free_list[class].push(ptr.as_ptr() as *mut usize);
+            self.free_list[class].push(ptr as *mut usize);
 
             // Merge free buddy lists
-            let mut current_ptr = ptr.as_ptr() as usize;
+            let mut current_ptr = ptr as usize;
             let mut current_class = class;
 
             while current_class < self.free_list.len() - 1 {
                 let buddy = current_ptr ^ (1 << current_class);
                 let mut flag = false;
                 for block in self.free_list[current_class].iter_mut() {
-                    if block.value() as usize == buddy {
+                    if block.value() == buddy {
                         block.pop();
                         flag = true;
                         break;

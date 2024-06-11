@@ -31,6 +31,8 @@ impl PartialEq for PTEFlags {
     }
 }
 
+// |64    54|53  28|27  19|18  10|9 8|7|6|5|4|3|2|1|0|
+// |Reserved|PPN[2]|PPN[1]|PPN[0]|RSW|D|A|G|U|X|W|R|V|
 impl PageTableEntry {
     pub fn new(ppn: PhysPageNum, flags: PTEFlags) -> Self {
         PageTableEntry {
@@ -131,5 +133,32 @@ impl PageTable {
     pub fn query_pte(&self, vpn: VirtPageNum) -> Option<PageTableEntry> {
         self.find_pte(vpn)
             .map(|pte| {pte.clone()})
+    }
+    #[allow(unused)]
+    pub fn map(&mut self, vpn: VirtPageNum, ppn: PhysPageNum, flags: PTEFlags) {
+        let pte = self.find_pte_create(vpn).unwrap();
+        assert!(!pte.is_valid(), "vpn {:?} is mapped before mapping", vpn);
+        *pte = PageTableEntry::new(ppn, flags | PTEFlags::V);
+    }
+    #[allow(unused)]
+    pub fn unmap(&mut self, vpn: VirtPageNum) {
+        let pte = self.find_pte(vpn).unwrap();
+        assert!(pte.is_valid(), "vpn {:?} is invalid before unmapping", vpn);
+        *pte = PageTableEntry::empty();
+    }
+
+    //
+    pub fn from_token(satp: usize) -> Self {
+        Self {
+            root: PhysPageNum::from(satp & ((1usize << 44) - 1)),
+            frames: Vec::new(),
+        }
+    }
+    pub fn translate(&self, vpn: VirtPageNum) -> Option<PageTableEntry> {
+        self.find_pte(vpn)
+            .map(|pte| {pte.clone()})
+    }
+    pub fn token(&self) -> usize {
+        8usize << 60 | self.root.0
     }
 }

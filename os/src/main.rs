@@ -1,27 +1,29 @@
 #![no_std] // use core
 #![no_main] // no initialization of std
 #![feature(panic_info_message,asm_const)]
-#![feature(alloc_error_handler)]
+// #![feature(alloc_error_handler)]
 extern crate alloc;
 
-#[macro_use]
-extern crate bitflags;
+// #[macro_use]
+// extern crate bitflags;
 
-// mod config;
-// mod heap;
+mod config;
+mod heap;
 mod io;
 mod lang_items;
 // mod mm;
 mod sync;
-mod syscall;
-mod trap;
+// mod syscall;
+// mod trap;
 
+use alloc::boxed::Box;
 // 在 Rust 代码中直接插入汇编指令
 use core::arch::global_asm;
 global_asm!(include_str!("entry.asm"));
 
 use core::arch::asm;
-// use config::*;
+use config::*;
+use heap::HEAP_ALLOCATOR;
 use io::uart::UART;
 use riscv::register::*;
 
@@ -32,9 +34,9 @@ pub fn rust_main() {
     clear_bss();
     UART.init();
     println!("Hello, world!");
-    // heap::init_heap();
+    HEAP_ALLOCATOR.init();
     // heap::heap_test();
-    panic!("Shutdown machine!");
+    // panic!("Shutdown machine!");
 }
 
 unsafe fn rust_m2s_mode(){

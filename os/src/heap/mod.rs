@@ -1,49 +1,51 @@
 mod buddy_allocator;
 mod linked_list;
 
-use buddy_system_allocator::LockedHeap;
+use core::alloc::GlobalAlloc;
+use core::ops::Deref;
+// use buddy_system_allocator::LockedHeap;
 use crate::config::KERNEL_HEAP_SIZE;
-use crate::println;
+use buddy_allocator::BuddyAllocator;
+use crate::sync::up::UPSafeCell;
+
+static mut KERNEL_HEAP: [u8; KERNEL_HEAP_SIZE] = [0; KERNEL_HEAP_SIZE];
 
 #[global_allocator]
-static HEAP_ALLOCATOR: LockedHeap<32> = LockedHeap::<32>::empty();
+pub static HEAP_ALLOCATOR: UPHeapAllocator = UPHeapAllocator::new();
 
-pub fn handle_alloc_error(layout: core::alloc::Layout) -> ! {
-    panic!("Heap allocation error, layout = {:?}", layout);
+pub struct UPHeapAllocator {
+    heap: UPSafeCell<BuddyAllocator>,
 }
 
-static mut HEAP_SPACE: [u8; KERNEL_HEAP_SIZE] = [0; KERNEL_HEAP_SIZE];
+impl UPHeapAllocator{
+    pub const fn new() -> Self {
+        Self {
+            heap: UPSafeCell::new(BuddyAllocator::empty()),
+        }
+    }
 
-pub fn init_heap() {
-    unsafe {
-        HEAP_ALLOCATOR
-            .lock()
-            .init(HEAP_SPACE.as_ptr() as usize, KERNEL_HEAP_SIZE);
+    pub fn init(&self) {
+        unsafe {
+            let start = KERNEL_HEAP.as_ptr() as usize;
+            self.heap.exclusive_access().init(start, KERNEL_HEAP_SIZE);
+        }
     }
 }
 
-#[allow(unused)]
-pub fn heap_test() {
-    use alloc::boxed::Box;
-    use alloc::vec::Vec;
-    extern "C" {
-        fn sbss();
-        fn ebss();
+impl Deref for UPHeapAllocator{
+    type Target = UPSafeCell<BuddyAllocator>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.heap
     }
-    let bss_range = sbss as usize..ebss as usize;
-    let a = Box::new(5);
-    assert_eq!(*a, 5);
-    assert!(bss_range.contains(&(a.as_ref() as *const _ as usize)));
-    drop(a);
-    let mut v: Vec<usize> = Vec::new();
-    for i in 0..500 {
-        v.push(i);
-    }
-    for i in 0..500 {
-        assert_eq!(v[i], i);
-    }
-    assert!(bss_range.contains(&(v.as_ptr() as usize)));
-    drop(v);
-    println!("heap_test passed!");
 }
 
+unsafe impl GlobalAlloc for UPHeapAllocator{
+    unsafe fn alloc(&self, layout: core::alloc::Layout) -> *mut u8 {
+        self.heap.exclusive_access().alloc(layout)
+    }
+
+    unsafe fn dealloc(&self, ptr: *mut u8, layout: core::alloc::Layout) {
+        self.heap.exclusive_access().dealloc(ptr, layout)
+    }
+}
