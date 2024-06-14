@@ -1,14 +1,7 @@
 mod address;
-mod frame_allocator;
-// mod memory_set;
-mod page_table;
+pub mod frame_allocator;
+mod map_area;
+pub(crate) mod memory_set;
+pub(crate) mod page_table;
+mod range;
 
-use crate::heap;
-
-// pub use memory_set::KERNEL_SPACE;
-//
-// pub fn init() {
-//     heap::init_heap();
-//     frame_allocator::init_frame_allocator();
-//     KERNEL_SPACE.exclusive_access().activate();
-// }

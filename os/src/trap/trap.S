@@ -2,9 +2,11 @@
 .macro SAVE_GP n
     sd x\n, \n*8(sp)
 .endm
+
 .macro LOAD_GP n
     ld x\n, \n*8(sp)
 .endm
+
     .section .text.trampoline
     .globl __alltraps
     .globl __restore
@@ -12,7 +14,7 @@
 __alltraps:
     csrrw sp, sscratch, sp
     # now sp->*TrapContext in user space, sscratch->user stack
-    # save other general purpose registers
+    # save other general purpose registers x1(ra) x3(gp)
     sd x1, 1*8(sp)
     # skip sp(x2), we will save it later
     sd x3, 3*8(sp)

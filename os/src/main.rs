@@ -2,6 +2,8 @@
 #![no_main] // no initialization of std
 #![feature(panic_info_message,asm_const)]
 // #![feature(alloc_error_handler)]
+
+// #[macro_use]
 extern crate alloc;
 
 // #[macro_use]
@@ -11,31 +13,38 @@ mod config;
 mod heap;
 mod io;
 mod lang_items;
-// mod mm;
+mod mm;
 mod sync;
 // mod syscall;
-// mod trap;
+mod task;
+mod trap;
 
-use alloc::boxed::Box;
 // 在 Rust 代码中直接插入汇编指令
 use core::arch::global_asm;
 global_asm!(include_str!("entry.asm"));
 
-use core::arch::asm;
 use config::*;
+use core::arch::asm;
 use heap::HEAP_ALLOCATOR;
 use io::uart::UART;
 use riscv::register::*;
+use mm::frame_allocator::init_frame_allocator;
+use mm::page_table::activate_page_table;
 
 
 // avoid confusing names
 #[no_mangle]
 pub fn rust_main() {
     clear_bss();
+    println!("[kernel] .bss cleared");
     UART.init();
-    println!("Hello, world!");
+    println!("[kernel] UART initialized");
     HEAP_ALLOCATOR.init();
-    // heap::heap_test();
+    println!("[kernel] heap initialized");
+    init_frame_allocator();
+    println!("[kernel] frame allocator initialized");
+    activate_page_table();
+    println!("[kernel] page table activated");
     // panic!("Shutdown machine!");
 }
 

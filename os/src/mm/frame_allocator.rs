@@ -2,7 +2,6 @@ use alloc::vec::Vec;
 use lazy_static::lazy_static;
 
 use crate::config::*;
-use crate::println;
 use crate::sync::up::UPSafeCell;
 use super::address::*;
 
@@ -26,7 +25,6 @@ impl Drop for FrameTracker {
     }
 }
 
-
 trait FrameAllocator {
     fn new() -> Self;
     fn alloc(&mut self) -> Option<PhysPageNum>;
@@ -35,23 +33,23 @@ trait FrameAllocator {
 
 pub struct StackFrameAllocator {
     //空闲内存的起始物理页号
-    begin: usize,
+    start: usize,
     //空闲内存的结束物理页号
     end: usize,
     recycled: Vec<usize>,
 }
 
 impl StackFrameAllocator {
-    pub fn init(&mut self, l: PhysPageNum, r: PhysPageNum) {
-        self.begin = l.0;
-        self.end = r.0;
+    pub fn init(&mut self, start: PhysPageNum, end: PhysPageNum) {
+        self.start = start.0;
+        self.end = end.0;
     }
 }
 
 impl FrameAllocator for StackFrameAllocator {
     fn new() -> Self {
         Self {
-            begin: 0,
+            start: 0,
             end: 0,
             recycled: Vec::new(),
         }
@@ -60,18 +58,18 @@ impl FrameAllocator for StackFrameAllocator {
         if let Some(ppn) = self.recycled.pop() {
             Some(ppn.into())
         } else {
-            if self.begin == self.end {
+            if self.start == self.end {
                 None
             } else {
-                self.begin += 1;
-                Some((self.begin - 1).into())
+                self.start += 1;
+                Some((self.start - 1).into())
             }
         }
     }
     fn dealloc(&mut self, ppn: PhysPageNum) {
         let ppn = ppn.0;
         // validity check
-        if ppn >= self.begin || self.recycled
+        if ppn >= self.start || self.recycled
             .iter()
             .find(|&v| { *v == ppn })
             .is_some() {
@@ -83,11 +81,8 @@ impl FrameAllocator for StackFrameAllocator {
 }
 
 
-type FrameAllocatorImpl = StackFrameAllocator;
 lazy_static! {
-    pub static ref FRAME_ALLOCATOR: UPSafeCell<FrameAllocatorImpl> = unsafe {
-        UPSafeCell::new(FrameAllocatorImpl::new())
-    };
+    pub static ref FRAME_ALLOCATOR: UPSafeCell<StackFrameAllocator> = UPSafeCell::new(StackFrameAllocator::new());
 }
 
 pub fn init_frame_allocator() {
@@ -111,22 +106,3 @@ fn frame_dealloc(ppn: PhysPageNum) {
         .exclusive_access()
         .dealloc(ppn);
 }
-
-
-// #[allow(unused)]
-// pub fn frame_allocator_test() {
-//     let mut v: Vec<FrameTracker> = Vec::new();
-//     for i in 0..5 {
-//         let frame = frame_alloc().unwrap();
-//         println!("{:?}", frame);
-//         v.push(frame);
-//     }
-//     v.clear();
-//     for i in 0..5 {
-//         let frame = frame_alloc().unwrap();
-//         println!("{:?}", frame);
-//         v.push(frame);
-//     }
-//     drop(v);
-//     println!("frame_allocator_test passed!");
-// }

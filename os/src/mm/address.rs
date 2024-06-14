@@ -1,13 +1,15 @@
 use crate::config::*;
-use crate::mm::page_table::PageTableEntry;
+use super::page_table::PageTableEntry;
+use super::range::{Range, StepByOne};
 
 // SV39
 // 4KB 12bit
-// |  VPN  |Offset|
-// |38   12|11   0|
+// PhyAddr
 // |  PPN  |Offset|
 // |55   12|11   0|
-
+// VirAddr
+// |  VPN  |Offset|
+// |38   12|11   0|
 
 // Type definition
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
@@ -139,12 +141,15 @@ impl From<PhysPageNum> for usize {
 
 impl From<VirtAddr> for usize {
     fn from(v: VirtAddr) -> Self {
-        if v.0 >= (1 << (VA_WIDTH_SV39 - 1)) {
-            v.0 | (!((1 << VA_WIDTH_SV39) - 1))
-        } else {
-            v.0
-        }
+        v.0
     }
+    // fn from(v: VirtAddr) -> Self {
+    //     if v.0 >= (1 << (VA_WIDTH_SV39 - 1)) {
+    //         v.0 | (!((1 << VA_WIDTH_SV39) - 1))
+    //     } else {
+    //         v.0
+    //     }
+    // }
 }
 
 impl From<VirtPageNum> for usize {
@@ -181,81 +186,29 @@ impl From<VirtPageNum> for VirtAddr {
     }
 }
 
-
-pub trait StepByOne {
-    fn step(&mut self);
+impl StepByOne for PhysAddr {
+    fn step(&mut self) {
+        self.0 += 1;
+    }
 }
+
+impl StepByOne for PhysPageNum {
+    fn step(&mut self) {
+        self.0 += 1;
+    }
+}
+
+impl StepByOne for VirtAddr {
+    fn step(&mut self) {
+        self.0 += 1;
+    }
+}
+
 impl StepByOne for VirtPageNum {
     fn step(&mut self) {
         self.0 += 1;
     }
 }
 
-#[derive(Copy, Clone)]
-/// a simple range structure for type T
-pub struct SimpleRange<T>
-    where
-        T: StepByOne + Copy + PartialEq + PartialOrd ,
-{
-    l: T,
-    r: T,
-}
-impl<T> SimpleRange<T>
-    where
-        T: StepByOne + Copy + PartialEq + PartialOrd ,
-{
-    pub fn new(start: T, end: T) -> Self {
-        assert!(start <= end, "start {:?} > end {:?}!", start, end);
-        Self { l: start, r: end }
-    }
-    pub fn get_start(&self) -> T {
-        self.l
-    }
-    pub fn get_end(&self) -> T {
-        self.r
-    }
-}
-impl<T> IntoIterator for SimpleRange<T>
-    where
-        T: StepByOne + Copy + PartialEq + PartialOrd ,
-{
-    type Item = T;
-    type IntoIter = SimpleRangeIterator<T>;
-    fn into_iter(self) -> Self::IntoIter {
-        SimpleRangeIterator::new(self.l, self.r)
-    }
-}
-/// iterator for the simple range structure
-pub struct SimpleRangeIterator<T>
-    where
-        T: StepByOne + Copy + PartialEq + PartialOrd ,
-{
-    current: T,
-    end: T,
-}
-impl<T> SimpleRangeIterator<T>
-    where
-        T: StepByOne + Copy + PartialEq + PartialOrd ,
-{
-    pub fn new(l: T, r: T) -> Self {
-        Self { current: l, end: r }
-    }
-}
-impl<T> Iterator for SimpleRangeIterator<T>
-    where
-        T: StepByOne + Copy + PartialEq + PartialOrd ,
-{
-    type Item = T;
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.current == self.end {
-            None
-        } else {
-            let t = self.current;
-            self.current.step();
-            Some(t)
-        }
-    }
-}
-
 /// a simple range structure for virtual page number
-pub type VPNRange = SimpleRange<VirtPageNum>;
+pub type VPNRange = Range<VirtPageNum>;

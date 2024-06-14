@@ -4,10 +4,13 @@
 
 #[macro_use]
 pub mod console;
+mod heap;
 mod lang_items;
 mod syscall;
 
 use syscall::*;
+
+
 
 
 #[no_mangle]
