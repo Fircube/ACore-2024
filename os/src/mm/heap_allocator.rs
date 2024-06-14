@@ -1,11 +1,8 @@
-mod buddy_allocator;
-mod linked_list;
-
 use core::alloc::GlobalAlloc;
 use core::ops::Deref;
 // use buddy_system_allocator::LockedHeap;
 use crate::config::KERNEL_HEAP_SIZE;
-use buddy_allocator::BuddyAllocator;
+use heap::buddy_allocator::BuddyAllocator;
 use crate::sync::up::UPSafeCell;
 
 static mut KERNEL_HEAP: [u8; KERNEL_HEAP_SIZE] = [0; KERNEL_HEAP_SIZE];

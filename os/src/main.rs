@@ -1,6 +1,6 @@
 #![no_std] // use core
 #![no_main] // no initialization of std
-#![feature(panic_info_message,asm_const)]
+#![feature(panic_info_message, asm_const)]
 // #![feature(alloc_error_handler)]
 
 // #[macro_use]
@@ -10,7 +10,6 @@ extern crate alloc;
 // extern crate bitflags;
 
 mod config;
-mod heap;
 mod io;
 mod lang_items;
 mod mm;
@@ -25,7 +24,7 @@ global_asm!(include_str!("entry.asm"));
 
 use config::*;
 use core::arch::asm;
-use heap::HEAP_ALLOCATOR;
+use mm::heap_allocator::HEAP_ALLOCATOR;
 use io::uart::UART;
 use riscv::register::*;
 use mm::frame_allocator::init_frame_allocator;
@@ -48,7 +47,8 @@ pub fn rust_main() {
     // panic!("Shutdown machine!");
 }
 
-unsafe fn rust_m2s_mode(){
+#[no_mangle]
+unsafe fn rust_m2s_mode() {
     mstatus::set_mpp(mstatus::MPP::Supervisor);
     mepc::write(rust_main as usize);
 
@@ -61,13 +61,13 @@ unsafe fn rust_m2s_mode(){
     pmpaddr0::write(0x3fffffffffffffusize);
     pmpcfg0::write(0xf);
 
-    init_timer();
+    // init_timer();
 
     asm!(
-        "li t0 {medeleg}",
-        "csrw medeleg t0",
-        "li t0 {mideleg}",
-        "csrw mideleg t0",
+        "li t0, {medeleg}",
+        "li t1, {mideleg}",
+        "csrw medeleg, t0",
+        "csrw mideleg, t1",
         "mret",
         medeleg = const 0xffff,
         mideleg = const 0xffff,
