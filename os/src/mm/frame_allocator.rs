@@ -2,6 +2,7 @@ use alloc::vec::Vec;
 use lazy_static::lazy_static;
 
 use crate::config::*;
+use crate::println;
 use crate::sync::up::UPSafeCell;
 use super::address::*;
 
@@ -43,6 +44,7 @@ impl StackFrameAllocator {
     pub fn init(&mut self, start: PhysPageNum, end: PhysPageNum) {
         self.start = start.0;
         self.end = end.0;
+        println!("[stack] last {} Physical Frames.", self.end - self.start);
     }
 }
 
@@ -71,8 +73,7 @@ impl FrameAllocator for StackFrameAllocator {
         // validity check
         if ppn >= self.start || self.recycled
             .iter()
-            .find(|&v| { *v == ppn })
-            .is_some() {
+            .any(|&v| v == ppn) {
             panic!("Frame ppn={:#x} has not been allocated!", ppn);
         }
         // recycle
@@ -106,3 +107,4 @@ fn frame_dealloc(ppn: PhysPageNum) {
         .exclusive_access()
         .dealloc(ppn);
 }
+

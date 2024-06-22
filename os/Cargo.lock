@@ -158,9 +158,9 @@ checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
 
 [[package]]
 name = "volatile"
-version = "0.5.2"
+version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b214e6480cbaa16049d2f256268b51732a8d1e5507ac56392990604c7c71d936"
+checksum = "af8ca9a5d4debca0633e697c88269395493cebf2e10db21ca2dbde37c1356452"
 
 [[package]]
 name = "xmas-elf"

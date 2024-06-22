@@ -10,19 +10,28 @@ pub struct TrapContext {
     pub trap_handler: usize,
 }
 
-// impl TrapContext {
-//     pub fn set_sp(&mut self, sp: usize) {
-//         self.x[2] = sp;
-//     }
-//     pub fn app_init_context(entry: usize, sp: usize) -> Self {
-//         let mut sstatus = sstatus::read();
-//         sstatus.set_spp(SPP::User);
-//         let mut cx = Self {
-//             regs: [0; 32],
-//             sstatus,
-//             sepc: entry,
-//         };
-//         cx.set_sp(sp);
-//         cx
-//     }
-// }
+impl TrapContext {
+    pub fn new(
+        entry: usize,
+        sp: usize,
+        kernel_satp: usize,
+        kernel_sp: usize,
+        trap_handler: usize,
+    ) -> Self {
+        let mut sstatus = sstatus::read(); // CSR sstatus
+        sstatus.set_spp(SPP::User); //previous privilege mode: user mode
+        let mut cx = Self {
+            regs: [0; 32],
+            sstatus,
+            sepc: entry,  // entry point of app
+            kernel_satp,  // addr of page table
+            kernel_sp,    // kernel stack
+            trap_handler, // addr of trap_handler function
+        };
+        cx.set_sp(sp); // app's user stack pointer
+        cx // return initial Trap Context of app
+    }
+    pub fn set_sp(&mut self, sp: usize) {
+        self.regs[2] = sp;
+    }
+}

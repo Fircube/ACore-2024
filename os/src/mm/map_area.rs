@@ -6,6 +6,7 @@ use crate::mm::memory_set::{MapPermission, MapType};
 use crate::mm::page_table::{PageTable, PTEFlags};
 use crate::mm::range::StepByOne;
 
+
 pub struct MapArea {
     pub vpn_range: VPNRange,
     data_frames: BTreeMap<VirtPageNum, FrameTracker>,
@@ -95,6 +96,14 @@ impl MapArea {
                 break;
             }
             current_vpn.step();
+        }
+    }
+    pub fn from_another(another: &Self) -> Self {
+        Self {
+            vpn_range: VPNRange::new(another.vpn_range.get_start(), another.vpn_range.get_end()),
+            data_frames: BTreeMap::new(),
+            map_type: another.map_type,
+            map_perm: another.map_perm,
         }
     }
 }

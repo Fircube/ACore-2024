@@ -3,6 +3,7 @@ use core::ops::Deref;
 // use buddy_system_allocator::LockedHeap;
 use crate::config::KERNEL_HEAP_SIZE;
 use heap::buddy_allocator::BuddyAllocator;
+use crate::println;
 use crate::sync::up::UPSafeCell;
 
 static mut KERNEL_HEAP: [u8; KERNEL_HEAP_SIZE] = [0; KERNEL_HEAP_SIZE];

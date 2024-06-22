@@ -24,10 +24,6 @@ impl<T> Range<T>
     pub fn get_end(&self) -> T {
         self.end
     }
-
-    pub fn into_iter(self) -> RangeIterator<T> {
-        RangeIterator::new(self.start, self.end)
-    }
 }
 
 pub struct RangeIterator<T>

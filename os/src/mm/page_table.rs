@@ -1,3 +1,4 @@
+use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
 use core::arch::asm;
@@ -5,6 +6,8 @@ use bitflags::*;
 use core::cmp::PartialEq;
 use crate::mm::frame_allocator::*;
 use crate::mm::memory_set::KERNEL_SPACE;
+use crate::mm::range::StepByOne;
+use crate::println;
 use super::address::*;
 
 bitflags! {
@@ -74,6 +77,10 @@ pub struct PageTable {
 impl PageTable {
     pub fn new() -> Self {
         let frame = frame_alloc().unwrap();
+        println!(
+            "[page_table] PPN of page table root is {:#x}.",
+            usize::from(frame.ppn)<<12
+        );
         PageTable {
             level0_ppn: frame.ppn,
             frames: vec![frame],
@@ -116,40 +123,16 @@ impl PageTable {
         }
         result
     }
-    pub fn insert(&mut self, vpn: VirtPageNum, ppn: PhysPageNum, flags: PTEFlags){
+    pub fn map(&mut self, vpn: VirtPageNum, ppn: PhysPageNum, flags: PTEFlags){
         let pte = self.create_pte(vpn).unwrap();
         assert!(!pte.is_valid(), "vpn {:?} is invalid before mapping", vpn);
         *pte = PageTableEntry::new(ppn, flags | PTEFlags::V);
     }
-    pub fn erase(&mut self, vpn: VirtPageNum){
+    pub fn unmap(&mut self, vpn: VirtPageNum){
         let pte = self.find_pte(vpn).unwrap();
         assert!(pte.is_valid(), "vpn {:?} is invalid before unmapping", vpn);
         *pte = PageTableEntry::empty();
     }
-    pub fn query_pt(satp: usize) -> Self {
-        Self {
-            level0_ppn: PhysPageNum::from(satp & ((1usize << 44) - 1)),
-            frames: Vec::new(),
-        }
-    }
-    pub fn query_pte(&self, vpn: VirtPageNum) -> Option<PageTableEntry> {
-        self.find_pte(vpn)
-            .map(|pte| {pte.clone()})
-    }
-    #[allow(unused)]
-    pub fn map(&mut self, vpn: VirtPageNum, ppn: PhysPageNum, flags: PTEFlags) {
-        let pte = self.create_pte(vpn).unwrap();
-        assert!(!pte.is_valid(), "vpn {:?} is mapped before mapping", vpn);
-        *pte = PageTableEntry::new(ppn, flags | PTEFlags::V);
-    }
-    #[allow(unused)]
-    pub fn unmap(&mut self, vpn: VirtPageNum) {
-        let pte = self.find_pte(vpn).unwrap();
-        assert!(pte.is_valid(), "vpn {:?} is invalid before unmapping", vpn);
-        *pte = PageTableEntry::empty();
-    }
-
-    //
     pub fn from_token(satp: usize) -> Self {
         Self {
             level0_ppn: PhysPageNum::from(satp & ((1usize << 44) - 1)),
@@ -160,20 +143,64 @@ impl PageTable {
         self.find_pte(vpn)
             .map(|pte| {pte.clone()})
     }
-    pub fn token(&self) -> usize {
-        8usize << 60 | self.level0_ppn.0
+    pub fn translate_va(&self, va: VirtAddr) -> Option<PhysAddr> {
+        self.find_pte(va.clone().floor()).map(|pte| {
+            let aligned_pa: PhysAddr = pte.ppn().into();
+            let offset = va.page_offset();
+            let aligned_pa_usize: usize = aligned_pa.into();
+            (aligned_pa_usize + offset).into()
+        })
     }
     pub fn to_satp(&self) -> usize {
         8usize << 60 | self.level0_ppn.0
     }
 }
 
-pub fn activate_page_table() {
-    let kernel_space = KERNEL_SPACE.exclusive_access();
-    let page_table = kernel_space.page_table();
-    let satp = page_table.to_satp();
-    riscv::register::satp::write(satp);
-    unsafe {
-        asm!("sfence.vma");
+pub fn translated_byte_buffer(token: usize, ptr: *const u8, len: usize) -> Vec<&'static mut [u8]> {
+    let page_table = PageTable::from_token(token);
+    let mut start = ptr as usize;
+    let end = start + len;
+    let mut v = Vec::new();
+    while start < end {
+        let start_va = VirtAddr::from(start);
+        let mut vpn = start_va.floor();
+        let ppn = page_table.translate(vpn).unwrap().ppn();
+        vpn.step();
+        let mut end_va: VirtAddr = vpn.into();
+        end_va = end_va.min(VirtAddr::from(end));
+        if end_va.page_offset() == 0 {
+            v.push(&mut ppn.get_bytes_array()[start_va.page_offset()..]);
+        } else {
+            v.push(&mut ppn.get_bytes_array()[start_va.page_offset()..end_va.page_offset()]);
+        }
+        start = end_va.into();
     }
+    v
+}
+
+pub fn translated_str(token: usize, ptr: *const u8) -> String {
+    let page_table = PageTable::from_token(token);
+    let mut string = String::new();
+    let mut va = ptr as usize;
+    loop {
+        let ch: u8 = *(page_table
+            .translate_va(VirtAddr::from(va))
+            .unwrap()
+            .get_mut());
+        if ch == 0 {
+            break;
+        } else {
+            string.push(ch as char);
+            va += 1;
+        }
+    }
+    string
+}
+pub fn translated_refmut<T>(token: usize, ptr: *mut T) -> &'static mut T {
+    let page_table = PageTable::from_token(token);
+    let va = ptr as usize;
+    page_table
+        .translate_va(VirtAddr::from(va))
+        .unwrap()
+        .get_mut()
 }

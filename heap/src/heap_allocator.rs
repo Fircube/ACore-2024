@@ -14,6 +14,10 @@ impl LockedHeap {
             allocator: TempMut::new(BuddyAllocator::empty()),
         }
     }
+
+    pub unsafe fn add_to_heap(&self, start: usize, end: usize) {
+        self.allocator.inner.borrow_mut().add_to_heap(start, end);
+    }
 }
 
 unsafe impl GlobalAlloc for LockedHeap {

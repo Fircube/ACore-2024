@@ -41,6 +41,9 @@ impl PhysAddr {
     pub fn aligned(&self) -> bool {
         self.page_offset() == 0
     }
+    pub fn get_mut<T>(&self) -> &'static mut T {
+        unsafe { (self.0 as *mut T).as_mut().unwrap() }
+    }
 }
 
 impl PhysPageNum {
@@ -61,9 +64,7 @@ impl PhysPageNum {
     // 泛型函数，可以获取一个恰好放在一个物理页帧开头的类型为 T 的数据的可变引用。
     pub fn get_mut<T>(&self) -> &'static mut T {
         let pa: PhysAddr = (*self).into();
-        unsafe {
-            (pa.0 as *mut T).as_mut().unwrap()
-        }
+        pa.get_mut()
     }
 
     // `'static` 为了绕过 Rust 编译器的借用检查，可以像一个正常的可变引用一样直接访问。
@@ -141,15 +142,12 @@ impl From<PhysPageNum> for usize {
 
 impl From<VirtAddr> for usize {
     fn from(v: VirtAddr) -> Self {
-        v.0
+        if v.0 >= (1 << (VA_WIDTH_SV39 - 1)) {
+            v.0 | (!((1 << VA_WIDTH_SV39) - 1))
+        } else {
+            v.0
+        }
     }
-    // fn from(v: VirtAddr) -> Self {
-    //     if v.0 >= (1 << (VA_WIDTH_SV39 - 1)) {
-    //         v.0 | (!((1 << VA_WIDTH_SV39) - 1))
-    //     } else {
-    //         v.0
-    //     }
-    // }
 }
 
 impl From<VirtPageNum> for usize {

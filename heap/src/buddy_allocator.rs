@@ -41,21 +41,24 @@ impl BuddyAllocator {
         let unit = size_of::<usize>();
         start = (start + unit - 1) & (!unit + 1);
         end &= !unit + 1;
+        self.total += end - start;
 
-        let mut total = 0;
-        let mut current_start = start;
-
-        while current_start < end {
-            let lowbit = current_start & (!current_start + 1);
-            let num = end - current_start;
-            let size = min(lowbit, 1 << (usize::BITS as usize - num.leading_zeros() as usize - 1));
-            total += size;
-
-            self.free_list[size.trailing_zeros() as usize].push(current_start as *mut usize);
-            current_start += size;
+        while start < end {
+            let level = (end - start).trailing_zeros() as usize;
+            self.free_list[level].push(start as *mut usize);
+            start += 1 << level;
         }
-        assert_eq!(total, end - start, "Total is not equal to end - start!");
-        self.total += total;
+        // while current_start < end {
+        //     let lowbit = current_start & (!current_start + 1);
+        //     let num = end - current_start;
+        //     let size = min(lowbit, 1 << (usize::BITS as usize - num.leading_zeros() as usize - 1));
+        //     total += size;
+        //
+        //     self.free_list[size.trailing_zeros() as usize].push(current_start as *mut usize);
+        //     current_start += size;
+        // }
+        // assert_eq!(total, end - start, "Total is not equal to end - start!");
+        // self.total += total;
     }
 
 

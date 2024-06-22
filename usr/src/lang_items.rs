@@ -11,7 +11,7 @@ fn panic_handler(info: &PanicInfo) -> ! {
             info.message().unwrap()
         );
     } else {
-        println!("[usr]Panicked: {}", info.message().unwrap());
+        println!("[user] Panicked: {}", info.message().unwrap());
     }
     loop {}
 }

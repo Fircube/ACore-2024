@@ -8,10 +8,10 @@
 .endm
 
     .section .text.trampoline
-    .globl __alltraps
-    .globl __restore
+    .globl __usertrap
+    .globl __userret
     .align 2
-__alltraps:
+__usertrap:
     csrrw sp, sscratch, sp
     # now sp->*TrapContext in user space, sscratch->user stack
     # save other general purpose registers x1(ra) x3(gp)
@@ -40,14 +40,16 @@ __alltraps:
     # move to kernel_sp
     ld sp, 35*8(sp)
     # switch to kernel space
+    sfence.vma
     csrw satp, t0
     sfence.vma
     # jump to trap_handler
     jr t1
 
-__restore:
+__userret:
     # a0: *TrapContext in user space(Constant); a1: user space token
     # switch to user space
+    sfence.vma
     csrw satp, a1
     sfence.vma
     csrw sscratch, a0

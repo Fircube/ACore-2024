@@ -1,7 +1,6 @@
 #![no_std] // use core
 #![no_main] // no initialization of std
 #![feature(panic_info_message, asm_const)]
-// #![feature(alloc_error_handler)]
 
 // #[macro_use]
 extern crate alloc;
@@ -14,13 +13,14 @@ mod io;
 mod lang_items;
 mod mm;
 mod sync;
-// mod syscall;
+mod syscall;
 mod task;
 mod trap;
 
 // 在 Rust 代码中直接插入汇编指令
 use core::arch::global_asm;
 global_asm!(include_str!("entry.asm"));
+global_asm!(include_str!("link_app.s"));
 
 use config::*;
 use core::arch::asm;
@@ -28,12 +28,14 @@ use mm::heap_allocator::HEAP_ALLOCATOR;
 use io::uart::UART;
 use riscv::register::*;
 use mm::frame_allocator::init_frame_allocator;
-use mm::page_table::activate_page_table;
-
+use mm::memory_set::activate_page_table;
+use crate::task::loader;
+use crate::task::processor::run_tasks;
 
 // avoid confusing names
 #[no_mangle]
 pub fn rust_main() {
+    println!("[kernel] From m mode to s mode");
     clear_bss();
     println!("[kernel] .bss cleared");
     UART.init();
@@ -44,7 +46,17 @@ pub fn rust_main() {
     println!("[kernel] frame allocator initialized");
     activate_page_table();
     println!("[kernel] page table activated");
-    // panic!("Shutdown machine!");
+
+    println!("[kernel] init task");
+    task::add_initproc();
+
+    // trap::init();
+    // trap::enable_timer_interrupt();
+    loader::list_apps();
+
+    println!("[kernel] run tasks");
+    run_tasks();
+    println!("[kernel] tasks finished");
 }
 
 #[no_mangle]

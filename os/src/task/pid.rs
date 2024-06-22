@@ -1,6 +1,15 @@
-use crate::sync::up::UPSafeCell;
 use alloc::vec::Vec;
 use lazy_static::*;
+use crate::sync::up::UPSafeCell;
+
+pub struct PidHandle(pub usize);
+
+impl Drop for PidHandle {
+    fn drop(&mut self) {
+        //println!("drop pid {}", self.0);
+        pid_dealloc(self.0);
+    }
+}
 
 pub struct PidAllocator {
     current: usize,
@@ -14,12 +23,12 @@ impl PidAllocator {
             recycled: Vec::new(),
         }
     }
-    pub fn alloc(&mut self) -> PidTracker {
+    pub fn alloc(&mut self) -> PidHandle {
         if let Some(pid) = self.recycled.pop() {
-            PidTracker(pid)
+            PidHandle(pid)
         } else {
             self.current += 1;
-            PidTracker(self.current - 1)
+            PidHandle(self.current - 1)
         }
     }
     pub fn dealloc(&mut self, pid: usize) {
@@ -33,23 +42,15 @@ impl PidAllocator {
     }
 }
 
-lazy_static! {
-    pub static ref PID_ALLOCATOR: UPSafeCell<PidAllocator> = UPSafeCell::new(PidAllocator::new()) ;
-}
-
-pub struct PidTracker(pub usize);
-
-impl Drop for PidTracker {
-    fn drop(&mut self) {
-        //println!("drop pid {}", self.0);
-        pid_dealloc(self);
-    }
-}
-
-pub fn pid_alloc() -> PidTracker {
+pub fn pid_alloc() -> PidHandle {
     PID_ALLOCATOR.exclusive_access().alloc()
 }
 
-pub fn pid_dealloc(pid: &PidTracker) {
-    PID_ALLOCATOR.exclusive_access().dealloc(pid.0);
+pub fn pid_dealloc(pid: usize) {
+    PID_ALLOCATOR.exclusive_access().dealloc(pid);
+}
+
+lazy_static! {
+    pub static ref PID_ALLOCATOR: UPSafeCell<PidAllocator> =
+        unsafe { UPSafeCell::new(PidAllocator::new()) };
 }
