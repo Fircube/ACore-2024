@@ -14,11 +14,11 @@ _num_app:
 
     .global _app_names
 _app_names:
+    .string "exec"
     .string "fork"
     .string "get"
     .string "hello_world"
     .string "initproc"
-    .string "loop"
     .string "shell"
 
     .section .data
@@ -26,7 +26,7 @@ _app_names:
     .global app_0_end
     .align 3
 app_0_start:
-    .incbin "../usr/target/riscv64gc-unknown-none-elf/release/fork"
+    .incbin "../usr/target/riscv64gc-unknown-none-elf/release/exec"
 app_0_end:
 
     .section .data
@@ -34,7 +34,7 @@ app_0_end:
     .global app_1_end
     .align 3
 app_1_start:
-    .incbin "../usr/target/riscv64gc-unknown-none-elf/release/get"
+    .incbin "../usr/target/riscv64gc-unknown-none-elf/release/fork"
 app_1_end:
 
     .section .data
@@ -42,7 +42,7 @@ app_1_end:
     .global app_2_end
     .align 3
 app_2_start:
-    .incbin "../usr/target/riscv64gc-unknown-none-elf/release/hello_world"
+    .incbin "../usr/target/riscv64gc-unknown-none-elf/release/get"
 app_2_end:
 
     .section .data
@@ -50,7 +50,7 @@ app_2_end:
     .global app_3_end
     .align 3
 app_3_start:
-    .incbin "../usr/target/riscv64gc-unknown-none-elf/release/initproc"
+    .incbin "../usr/target/riscv64gc-unknown-none-elf/release/hello_world"
 app_3_end:
 
     .section .data
@@ -58,7 +58,7 @@ app_3_end:
     .global app_4_end
     .align 3
 app_4_start:
-    .incbin "../usr/target/riscv64gc-unknown-none-elf/release/loop"
+    .incbin "../usr/target/riscv64gc-unknown-none-elf/release/initproc"
 app_4_end:
 
     .section .data

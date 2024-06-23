@@ -1,9 +1,8 @@
 use crate::mm::page_table::translated_byte_buffer;
-use crate::{print, println};
-use crate::io::console::{Stdin, Stdout};
-use crate::io::stdin;
+use crate::print;
+use crate::io::console::Stdin;
 use crate::task::processor::current_user_satp;
-use crate::task::suspend_and_run_next;
+// use crate::task::suspend_and_run_next;
 
 const FD_STDIN: usize = 0;
 const FD_STDOUT: usize = 1;

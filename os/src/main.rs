@@ -9,6 +9,7 @@ extern crate alloc;
 // extern crate bitflags;
 
 mod config;
+mod heap;
 mod io;
 mod lang_items;
 mod mm;
@@ -25,7 +26,8 @@ global_asm!(include_str!("link_app.s"));
 
 use config::*;
 use core::arch::asm;
-use mm::heap_allocator::HEAP_ALLOCATOR;
+// use mm::heap_allocator::HEAP_ALLOCATOR;
+use heap::init_heap;
 use io::uart::UART;
 use riscv::register::*;
 use mm::frame_allocator::init_frame_allocator;
@@ -43,7 +45,8 @@ pub fn rust_main() {
     println!("[kernel] .bss cleared");
     UART.init();
     println!("[kernel] UART initialized");
-    HEAP_ALLOCATOR.init();
+    // HEAP_ALLOCATOR.init();
+    init_heap();
     println!("[kernel] heap initialized");
     init_frame_allocator();
     println!("[kernel] frame allocator initialized");

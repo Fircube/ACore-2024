@@ -16,13 +16,9 @@ pub fn sys_yield() -> isize {
     0
 }
 
-// pub fn sys_get_time() -> isize {
-//     get_time_ms() as isize
-// }
-
-// pub fn sys_getpid() -> isize {
-//     current_task().unwrap().pid.0 as isize
-// }
+pub fn sys_getpid() -> isize {
+    curr_task().unwrap().pid.0 as isize
+}
 
 pub fn sys_fork() -> isize {
     let curr_task = curr_task().unwrap();

@@ -1,7 +1,7 @@
 use core::alloc::GlobalAlloc;
 use core::ops::Deref;
 use heap::buddy_allocator::BuddyAllocator;
-use crate::config::KERNEL_HEAP_SIZE;
+use crate::config::{KERNEL_HEAP_SIZE, KERNEL_HEAP_UNIT};
 use crate::sync::up::UPSafeCell;
 
 static mut KERNEL_HEAP: [u8; KERNEL_HEAP_SIZE] = [0; KERNEL_HEAP_SIZE];
@@ -16,7 +16,7 @@ pub struct UPHeapAllocator {
 impl UPHeapAllocator {
     pub const fn new() -> Self {
         Self {
-            heap: UPSafeCell::new(BuddyAllocator::empty()),
+            heap: UPSafeCell::new(BuddyAllocator::empty(KERNEL_HEAP_UNIT)),
         }
     }
 
