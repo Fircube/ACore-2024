@@ -33,6 +33,7 @@ pub struct RangeIterator<T>
     current: T,
     end: T,
 }
+
 impl<T> IntoIterator for Range<T>
     where
         T: StepByOne + Copy + PartialEq + PartialOrd,
@@ -43,6 +44,7 @@ impl<T> IntoIterator for Range<T>
         RangeIterator::new(self.start, self.end)
     }
 }
+
 impl<T> RangeIterator<T>
     where
         T: StepByOne + Copy + PartialEq + PartialOrd,

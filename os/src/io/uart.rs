@@ -104,7 +104,7 @@ impl MMIOPort {
     // Sends a byte on the serial port.
     pub fn send(&self, data: u8) {
         let rbr_thr = self.rbr_thr.load(Ordering::Relaxed);
-        unsafe{
+        unsafe {
             match data {
                 8 | 0x7F => {
                     wait_for!(self.line_status().contains(LineStsFlags::OUTPUT_EMPTY));

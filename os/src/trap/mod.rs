@@ -1,10 +1,11 @@
 use core::arch::{asm, global_asm};
 use riscv::register::mtvec::TrapMode;
-use riscv::register::{scause, stvec};
+use riscv::register::{scause, sip, stval, stvec};
 
-use crate::{syscall::syscall};
+use crate::{println, syscall::syscall};
 use crate::config::{TRAMPOLINE, TRAP_CONTEXT};
 use crate::task::processor::{current_trap_cx, current_user_satp};
+use crate::task::{exit_and_run_next, suspend_and_run_next};
 
 
 pub mod context;
@@ -13,19 +14,9 @@ global_asm!(include_str!("trap.s"));
 #[no_mangle]
 pub fn trap_handler() {
     let trap = scause::read().cause();
+    let scause = scause::read();
+    let stval = stval::read();
     match trap {
-        scause::Trap::Interrupt(intp) => match intp {
-            scause::Interrupt::SupervisorSoft => todo!(),
-            scause::Interrupt::SupervisorTimer => todo!(),
-            scause::Interrupt::SupervisorExternal => todo!(),
-            scause::Interrupt::UserSoft => todo!(),
-            scause::Interrupt::UserTimer => todo!(),
-            scause::Interrupt::UserExternal => todo!(),
-            scause::Interrupt::Unknown => todo!(),
-            scause::Interrupt::VirtualSupervisorSoft => todo!(),
-            scause::Interrupt::VirtualSupervisorTimer => todo!(),
-            scause::Interrupt::VirtualSupervisorExternal => todo!(),
-        },
         scause::Trap::Exception(excp) => match excp {
             scause::Exception::UserEnvCall => {
                 // jump to next instruction anyway
@@ -37,22 +28,49 @@ pub fn trap_handler() {
                 cx = current_trap_cx();
                 cx.regs[10] = result as usize;
             }
-            scause::Exception::InstructionMisaligned => todo!(),
-            scause::Exception::InstructionFault => todo!(),
-            scause::Exception::IllegalInstruction => todo!(),
-            scause::Exception::Breakpoint => todo!(),
-            scause::Exception::LoadFault => todo!(),
-            scause::Exception::StoreMisaligned => todo!(),
-            scause::Exception::StoreFault => todo!(),
-            scause::Exception::InstructionPageFault => todo!(),
-            scause::Exception::LoadPageFault => todo!(),
-            scause::Exception::StorePageFault => todo!(),
-            scause::Exception::Unknown => todo!(),
-            scause::Exception::VirtualSupervisorEnvCall => todo!(),
-            scause::Exception::InstructionGuestPageFault => todo!(),
-            scause::Exception::LoadGuestPageFault => todo!(),
-            scause::Exception::VirtualInstruction => todo!(),
-            scause::Exception::StoreGuestPageFault => todo!(),
+            scause::Exception::LoadFault
+            | scause::Exception::LoadPageFault
+            | scause::Exception::StoreFault
+            | scause::Exception::StorePageFault
+            | scause::Exception::InstructionFault
+            | scause::Exception::InstructionPageFault => {
+                println!(
+                    "[kernel] {:?} in application, bad addr = {:#x}, bad instruction = {:#x}, kernel killed it.",
+                    scause.cause(),
+                    stval,
+                    current_trap_cx().sepc,
+                );
+                // page fault exit code
+                exit_and_run_next(-2);
+            }
+            scause::Exception::IllegalInstruction => {
+                println!("[kernel] IllegalInstruction in application, kernel killed it.");
+                // illegal instruction exit code
+                exit_and_run_next(-3);
+            }
+            _ => {
+                panic!(
+                    "Unsupported exception {:?}, stval = {:#x}!",
+                    scause.cause(),
+                    stval
+                );
+            }
+        },
+        scause::Trap::Interrupt(intp) => match intp {
+            scause::Interrupt::SupervisorSoft => {
+                let sip = sip::read().bits();
+                unsafe {
+                    asm! {"csrw sip, {sip}", sip = in(reg) sip ^ 2};
+                }
+                suspend_and_run_next();
+            }
+            _ => {
+                panic!(
+                    "Unsupported interrupt {:?}, stval = {:#x}!",
+                    scause.cause(),
+                    stval
+                );
+            }
         },
     }
     trap_return();
@@ -60,9 +78,10 @@ pub fn trap_handler() {
 
 fn set_user_trap_entry() {
     unsafe {
-        stvec::write(TRAMPOLINE as usize, TrapMode::Direct);
+        stvec::write(TRAMPOLINE, TrapMode::Direct);
     }
 }
+
 #[no_mangle]
 /// set the new addr of __restore asm function in TRAMPOLINE page,
 /// set the reg a0 = trap_cx_ptr, reg a1 = phy addr of usr page table,

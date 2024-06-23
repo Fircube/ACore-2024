@@ -1,6 +1,5 @@
-use crate::task::{exit_and_yield, exit_and_run_next, suspend_and_yield, suspend_and_run_next};
+use crate::task::{exit_and_run_next, suspend_and_run_next};
 use crate::task::manager::add_task;
-// use crate::timer::get_time_ms;
 use alloc::sync::Arc;
 use crate::mm::page_table::{translated_refmut, translated_str};
 use crate::println;
@@ -49,6 +48,7 @@ pub fn sys_exec(path: *const u8) -> isize {
         task.exec(data);
         0
     } else {
+        println!("[syscall] fail to exec {}", path);
         -1
     }
 }

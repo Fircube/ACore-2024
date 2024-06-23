@@ -49,8 +49,6 @@ impl BuddyAllocator {
         }
     }
 
-
-
     // Alloc a range of memory from the heap satisfying `layout` requirements
     pub fn alloc(&mut self, layout: Layout) -> *mut u8 {
         let size = max(
@@ -70,7 +68,7 @@ impl BuddyAllocator {
                 return result as *mut u8;
             }
         }
-        panic!("[buddy allocator] out of memory when alloc size {}",size);
+        panic!("[buddy allocator] out of memory when alloc size {}", size);
     }
 
     // Dealloc a range of memory from the heap

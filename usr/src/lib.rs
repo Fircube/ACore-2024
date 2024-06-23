@@ -23,7 +23,7 @@ static HEAP: LockedHeap = unsafe { LockedHeap::new() };
 #[no_mangle]
 #[link_section = ".text.entry"]
 pub extern "C" fn _start() -> ! {
-    unsafe{
+    unsafe {
         let start = USER_HEAP.as_ptr() as usize;
         let end = start + USER_HEAP_SIZE;
         HEAP.add_to_heap(start, end);
@@ -37,20 +37,27 @@ pub extern "C" fn _start() -> ! {
 fn main() -> i32 {
     panic!("[usr] Cannot find main!");
 }
+
 pub fn read(fd: usize, buf: &mut [u8]) -> isize { sys_read(fd, buf) }
+
 pub fn write(fd: usize, buf: &[u8]) -> isize {
     sys_write(fd, buf)
 }
+
 pub fn exit(exit_code: i32) -> isize {
     sys_exit(exit_code)
 }
+
 pub fn yield_() -> isize { sys_yield() }
-pub fn fork() -> isize{
+
+pub fn fork() -> isize {
     sys_fork()
 }
-pub fn exec(path: &str) -> isize{
+
+pub fn exec(path: &str) -> isize {
     sys_exec(path)
 }
+
 pub fn wait(exit_code: &mut i32) -> isize {
     loop {
         match sys_waitpid(-1, exit_code as *mut _) {

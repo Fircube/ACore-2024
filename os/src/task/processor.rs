@@ -1,6 +1,5 @@
 use alloc::sync::Arc;
 use lazy_static::*;
-use crate::println;
 use crate::sync::up::UPSafeCell;
 use crate::task::manager::fetch_task;
 use crate::task::switch::__switch;
@@ -40,7 +39,7 @@ pub fn run_tasks() {
         // println!("[kernel] Switch");
         let mut processor = PROCESSOR.exclusive_access();
         if let Some(task) = fetch_task() {
-            println!("[kernel] Fetch successfully");
+            // println!("[kernel] Fetch successfully");
             let idle_task_cx_ptr = processor.get_idle_task_cx_ptr();
             // access coming task TCB exclusively
             let mut task_inner = task.inner_exclusive_access();
@@ -57,23 +56,28 @@ pub fn run_tasks() {
         }
     }
 }
+
 pub fn take_current_task() -> Option<Arc<TaskControlBlock>> {
     PROCESSOR.exclusive_access().take_current()
 }
+
 pub fn curr_task() -> Option<Arc<TaskControlBlock>> {
     PROCESSOR.exclusive_access().clone_curr_task()
 }
+
 pub fn current_user_satp() -> usize {
     let task = curr_task().unwrap();
     let token = task.inner_exclusive_access().get_user_token();
     token
 }
+
 pub fn current_trap_cx() -> &'static mut TrapContext {
     curr_task()
         .unwrap()
         .inner_exclusive_access()
         .get_trap_cx()
 }
+
 pub fn schedule(switched_task_cx_ptr: *mut TaskContext) {
     let mut processor = PROCESSOR.exclusive_access();
     let idle_task_cx_ptr = processor.get_idle_task_cx_ptr();

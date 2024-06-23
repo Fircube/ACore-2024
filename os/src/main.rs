@@ -15,6 +15,7 @@ mod mm;
 mod sync;
 mod syscall;
 mod task;
+mod time;
 mod trap;
 
 // 在 Rust 代码中直接插入汇编指令
@@ -31,10 +32,12 @@ use mm::frame_allocator::init_frame_allocator;
 use mm::memory_set::activate_page_table;
 use crate::task::{INITPROC, loader};
 use crate::task::processor::run_tasks;
+use crate::time::init_timer;
 
 // avoid confusing names
 #[no_mangle]
 pub fn rust_main() {
+    init_trap();
     println!("[kernel] From m mode to s mode");
     clear_bss();
     println!("[kernel] .bss cleared");
@@ -49,8 +52,7 @@ pub fn rust_main() {
 
     println!("[kernel] init task");
     task::add_initproc();
-    // trap::init();
-    // trap::enable_timer_interrupt();
+
     loader::list_apps();
 
     println!("[kernel] run tasks");
@@ -65,57 +67,33 @@ unsafe fn rust_m2s_mode() {
 
     satp::write(0);// disable paging
 
-    sie::set_sext(); // SEIE
-    sie::set_stimer(); // STIE
-    sie::set_ssoft(); // SSIE
-
     pmpaddr0::write(0x3fffffffffffffusize);
     pmpcfg0::write(0xf);
 
-    // init_timer();
+    asm!("csrr tp, mhartid");
+
+    init_timer();
 
     asm!(
-        "li t0, {medeleg}",
-        "li t1, {mideleg}",
-        "csrw medeleg, t0",
-        "csrw mideleg, t1",
-        "mret",
-        medeleg = const 0xffff,
-        mideleg = const 0xffff,
-        options(noreturn),
+    "li t0, {medeleg}",
+    "li t1, {mideleg}",
+    "csrw medeleg, t0",
+    "csrw mideleg, t1",
+    "mret",
+    medeleg = const 0xffff,
+    mideleg = const 0xffff,
+    options(noreturn),
     );
 }
 
-pub fn set_time(hartid: usize, time: usize) {
+fn init_trap() {
     unsafe {
-        let mtimecmp = (0x02004000 + 8 * hartid) as *mut usize;
-        *mtimecmp = time;
+        sie::set_sext(); // SEIE
+        sie::set_stimer(); // STIE
+        sie::set_ssoft(); // SSIE
     }
 }
 
-pub fn get_time() -> usize {
-    unsafe {
-        let mtime = 0x0200bff8 as *const usize;
-        *mtime
-    }
-}
-
-pub unsafe fn init_timer() {
-    let hartid = mhartid::read();
-
-    set_time(hartid, get_time() + TIMER_INTERVAL);
-
-    // mscratch::write(...);
-
-    extern "C" {
-        fn _timer_int_handle();
-    }
-    mtvec::write(_timer_int_handle as usize, mtvec::TrapMode::Direct);
-
-    mstatus::set_mie();
-
-    mie::set_mtimer(); // MTIP
-}
 
 // initialize .bss section
 fn clear_bss() {

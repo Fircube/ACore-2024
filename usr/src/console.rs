@@ -6,6 +6,9 @@ use crate::syscall::sys_write;
 const STDIN: usize = 0;
 const STDOUT: usize = 1;
 
+const BS: char = 8 as char;
+const DL: char = 127 as char;
+
 pub struct Stdin;
 
 pub struct Stdout;
@@ -19,12 +22,28 @@ impl Stdin {
 
     pub fn getline() -> String {
         let mut str = String::new();
-        loop{
+        loop {
             let c = Self::getchar();
             if c == '\n' || c == '\r' {
                 break;
             }
             str.push(c);
+        }
+        str
+    }
+
+    pub fn getshell() -> String {
+        let mut str = String::new();
+        let mut c = Self::getchar();
+        while c != '\n' && c != '\r' {
+            if c == DL || c == BS {
+                if !str.is_empty() {
+                    str.pop();
+                }
+            } else {
+                str.push(c);
+            }
+            c = Self::getchar();
         }
         str
     }

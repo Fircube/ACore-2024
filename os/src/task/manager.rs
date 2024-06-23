@@ -1,9 +1,7 @@
 use alloc::collections::VecDeque;
 use alloc::sync::Arc;
 use lazy_static::*;
-use crate::println;
 use crate::sync::up::UPSafeCell;
-use crate::task::processor::current_trap_cx;
 use crate::task::task::TaskControlBlock;
 
 pub struct TaskManager {
@@ -33,6 +31,7 @@ lazy_static! {
 pub fn add_task(task: Arc<TaskControlBlock>) {
     TASK_MANAGER.exclusive_access().add(task);
 }
+
 pub fn fetch_task() -> Option<Arc<TaskControlBlock>> {
     TASK_MANAGER.exclusive_access().fetch()
 }

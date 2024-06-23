@@ -33,7 +33,6 @@ pub struct TCBInner {
 }
 
 
-
 impl TaskControlBlock {
     pub fn inner_exclusive_access(&self) -> RefMut<'_, TCBInner> {
         self.inner.exclusive_access()

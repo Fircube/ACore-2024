@@ -1,9 +1,7 @@
 use core::alloc::GlobalAlloc;
 use core::ops::Deref;
-// use buddy_system_allocator::LockedHeap;
-use crate::config::KERNEL_HEAP_SIZE;
 use heap::buddy_allocator::BuddyAllocator;
-use crate::println;
+use crate::config::KERNEL_HEAP_SIZE;
 use crate::sync::up::UPSafeCell;
 
 static mut KERNEL_HEAP: [u8; KERNEL_HEAP_SIZE] = [0; KERNEL_HEAP_SIZE];
@@ -15,7 +13,7 @@ pub struct UPHeapAllocator {
     heap: UPSafeCell<BuddyAllocator>,
 }
 
-impl UPHeapAllocator{
+impl UPHeapAllocator {
     pub const fn new() -> Self {
         Self {
             heap: UPSafeCell::new(BuddyAllocator::empty()),
@@ -30,7 +28,7 @@ impl UPHeapAllocator{
     }
 }
 
-impl Deref for UPHeapAllocator{
+impl Deref for UPHeapAllocator {
     type Target = UPSafeCell<BuddyAllocator>;
 
     fn deref(&self) -> &Self::Target {
@@ -38,7 +36,7 @@ impl Deref for UPHeapAllocator{
     }
 }
 
-unsafe impl GlobalAlloc for UPHeapAllocator{
+unsafe impl GlobalAlloc for UPHeapAllocator {
     unsafe fn alloc(&self, layout: core::alloc::Layout) -> *mut u8 {
         self.heap.exclusive_access().alloc(layout)
     }

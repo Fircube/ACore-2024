@@ -2,6 +2,7 @@ use super::uart::UART;
 use core::fmt::{self, Write};
 
 pub struct Stdin;
+
 pub struct Stdout;
 
 impl Stdout {

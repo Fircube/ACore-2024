@@ -1,5 +1,4 @@
-use core::{alloc::GlobalAlloc, cell::RefCell};
-
+use core::alloc::GlobalAlloc;
 use crate::buddy_allocator::BuddyAllocator;
 use crate::temp_mut::TempMut;
 

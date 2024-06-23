@@ -18,32 +18,11 @@ mod switch;
 use alloc::sync::Arc;
 use lazy_static::lazy_static;
 pub use context::TaskContext;
-use crate::mm::page_table::translated_byte_buffer;
-use crate::{print, println};
+use crate::println;
 use crate::task::loader::get_app_data_by_name;
 use crate::task::manager::add_task;
-use crate::task::processor::{current_user_satp, schedule, take_current_task};
+use crate::task::processor::{schedule, take_current_task};
 use crate::task::task::{TaskControlBlock, TaskStatus};
-
-pub fn suspend_and_yield() {
-    let task = take_current_task().unwrap();
-    let mut task_inner = task.inner_exclusive_access();
-    let task_cx_ptr = &mut task_inner.task_cx as *mut TaskContext;
-    drop(task_inner);
-    drop(task);
-    schedule(task_cx_ptr);
-}
-
-pub fn exit_and_yield(exit_code: i32) {
-    let task = take_current_task().unwrap();
-    let mut inner = task.inner_exclusive_access();
-    let task_cx_ptr = &mut inner.task_cx as *mut TaskContext;
-    inner.task_status = TaskStatus::Zombie;
-    inner.exit_code = exit_code;
-    drop(inner);
-    drop(task);
-    schedule(task_cx_ptr);
-}
 
 // Suspend the current 'Running' task and run the next task in task list.
 pub fn suspend_and_run_next() {

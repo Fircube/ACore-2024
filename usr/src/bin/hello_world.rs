@@ -5,6 +5,6 @@
 extern crate usr_lib;
 
 #[no_mangle]
-fn main(){
+fn main() {
     println!("Hello, world!");
 }

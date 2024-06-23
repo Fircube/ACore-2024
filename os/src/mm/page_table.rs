@@ -1,11 +1,9 @@
 use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
-use core::arch::asm;
 use bitflags::*;
 use core::cmp::PartialEq;
 use crate::mm::frame_allocator::*;
-use crate::mm::memory_set::KERNEL_SPACE;
 use crate::mm::range::StepByOne;
 use crate::println;
 use super::address::*;
@@ -79,7 +77,7 @@ impl PageTable {
         let frame = frame_alloc().unwrap();
         println!(
             "[page_table] PPN of page table root is {:#x}.",
-            usize::from(frame.ppn)<<12
+            usize::from(frame.ppn) << 12
         );
         PageTable {
             level0_ppn: frame.ppn,
@@ -123,12 +121,12 @@ impl PageTable {
         }
         result
     }
-    pub fn map(&mut self, vpn: VirtPageNum, ppn: PhysPageNum, flags: PTEFlags){
+    pub fn map(&mut self, vpn: VirtPageNum, ppn: PhysPageNum, flags: PTEFlags) {
         let pte = self.create_pte(vpn).unwrap();
         assert!(!pte.is_valid(), "vpn {:?} is invalid before mapping", vpn);
         *pte = PageTableEntry::new(ppn, flags | PTEFlags::V);
     }
-    pub fn unmap(&mut self, vpn: VirtPageNum){
+    pub fn unmap(&mut self, vpn: VirtPageNum) {
         let pte = self.find_pte(vpn).unwrap();
         assert!(pte.is_valid(), "vpn {:?} is invalid before unmapping", vpn);
         *pte = PageTableEntry::empty();
@@ -141,7 +139,7 @@ impl PageTable {
     }
     pub fn translate(&self, vpn: VirtPageNum) -> Option<PageTableEntry> {
         self.find_pte(vpn)
-            .map(|pte| {pte.clone()})
+            .map(|pte| { pte.clone() })
     }
     pub fn translate_va(&self, va: VirtAddr) -> Option<PhysAddr> {
         self.find_pte(va.clone().floor()).map(|pte| {
@@ -196,6 +194,7 @@ pub fn translated_str(token: usize, ptr: *const u8) -> String {
     }
     string
 }
+
 pub fn translated_refmut<T>(token: usize, ptr: *mut T) -> &'static mut T {
     let page_table = PageTable::from_token(token);
     let va = ptr as usize;
