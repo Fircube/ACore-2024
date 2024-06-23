@@ -7,21 +7,21 @@ use crate::task::processor::current_trap_cx;
 use crate::task::task::TaskControlBlock;
 
 pub struct TaskManager {
-    ready_queue: VecDeque<Arc<TaskControlBlock>>,
+    ready_tasks_queue: VecDeque<Arc<TaskControlBlock>>,
 }
 
 // A simple FIFO scheduler.
 impl TaskManager {
     pub fn new() -> Self {
         Self {
-            ready_queue: VecDeque::new(),
+            ready_tasks_queue: VecDeque::new(),
         }
     }
     pub fn add(&mut self, task: Arc<TaskControlBlock>) {
-        self.ready_queue.push_back(task);
+        self.ready_tasks_queue.push_back(task);
     }
     pub fn fetch(&mut self) -> Option<Arc<TaskControlBlock>> {
-        self.ready_queue.pop_front()
+        self.ready_tasks_queue.pop_front()
     }
 }
 

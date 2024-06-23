@@ -1,7 +1,6 @@
 use alloc::sync::Arc;
 use lazy_static::*;
-use crate::{print, println};
-use crate::mm::page_table::translated_byte_buffer;
+use crate::println;
 use crate::sync::up::UPSafeCell;
 use crate::task::manager::fetch_task;
 use crate::task::switch::__switch;
@@ -27,7 +26,7 @@ impl Processor {
     pub fn take_current(&mut self) -> Option<Arc<TaskControlBlock>> {
         self.current.take()
     }
-    pub fn current(&self) -> Option<Arc<TaskControlBlock>> {
+    pub fn clone_curr_task(&self) -> Option<Arc<TaskControlBlock>> {
         self.current.as_ref().map(Arc::clone)
     }
 }
@@ -38,7 +37,7 @@ lazy_static! {
 
 pub fn run_tasks() {
     loop {
-        println!("[kernel] Switch");
+        // println!("[kernel] Switch");
         let mut processor = PROCESSOR.exclusive_access();
         if let Some(task) = fetch_task() {
             println!("[kernel] Fetch successfully");
@@ -61,16 +60,16 @@ pub fn run_tasks() {
 pub fn take_current_task() -> Option<Arc<TaskControlBlock>> {
     PROCESSOR.exclusive_access().take_current()
 }
-pub fn current_task() -> Option<Arc<TaskControlBlock>> {
-    PROCESSOR.exclusive_access().current()
+pub fn curr_task() -> Option<Arc<TaskControlBlock>> {
+    PROCESSOR.exclusive_access().clone_curr_task()
 }
 pub fn current_user_satp() -> usize {
-    let task = current_task().unwrap();
+    let task = curr_task().unwrap();
     let token = task.inner_exclusive_access().get_user_token();
     token
 }
 pub fn current_trap_cx() -> &'static mut TrapContext {
-    current_task()
+    curr_task()
         .unwrap()
         .inner_exclusive_access()
         .get_trap_cx()

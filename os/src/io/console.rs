@@ -1,11 +1,12 @@
 use super::uart::UART;
 use core::fmt::{self, Write};
 
+pub struct Stdin;
 pub struct Stdout;
 
 impl Stdout {
-    pub fn putchar(&self, c: char) {
-        UART.send(c as u8);
+    pub fn putchar(&self, c: u8) {
+        UART.send(c);
     }
 
     pub fn print(&mut self, args: fmt::Arguments) {
@@ -13,10 +14,18 @@ impl Stdout {
     }
 }
 
+impl Stdin {
+    pub fn getchar(&self) -> u8 {
+        let result = UART.receive();
+        Stdout.putchar(result);
+        result
+    }
+}
+
 impl Write for Stdout {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         for c in s.chars() {
-            self.putchar(c);
+            self.putchar(c as u8);
         }
         Ok(())
     }

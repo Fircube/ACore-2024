@@ -1,11 +1,34 @@
-use core::fmt::{self,Write};
+use alloc::string::String;
+use core::fmt::{self, Write};
 use crate::read;
 use crate::syscall::sys_write;
 
-pub struct Stdout;
-
 const STDIN: usize = 0;
 const STDOUT: usize = 1;
+
+pub struct Stdin;
+
+pub struct Stdout;
+
+impl Stdin {
+    pub fn getchar() -> char {
+        let mut c = [0u8; 1];
+        read(STDIN, &mut c);
+        c[0] as char
+    }
+
+    pub fn getline() -> String {
+        let mut str = String::new();
+        loop{
+            let c = Self::getchar();
+            if c == '\n' || c == '\r' {
+                break;
+            }
+            str.push(c);
+        }
+        str
+    }
+}
 
 impl Write for Stdout {
     fn write_str(&mut self, s: &str) -> fmt::Result {
@@ -14,11 +37,6 @@ impl Write for Stdout {
     }
 }
 
-pub fn getchar() -> u8 {
-    let mut c = [0u8; 1];
-    read(STDIN, &mut c);
-    c[0]
-}
 
 pub fn print(args: fmt::Arguments) {
     Stdout.write_fmt(args).unwrap();

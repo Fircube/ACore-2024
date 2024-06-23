@@ -25,8 +25,28 @@ use crate::task::manager::add_task;
 use crate::task::processor::{current_user_satp, schedule, take_current_task};
 use crate::task::task::{TaskControlBlock, TaskStatus};
 
+pub fn suspend_and_yield() {
+    let task = take_current_task().unwrap();
+    let mut task_inner = task.inner_exclusive_access();
+    let task_cx_ptr = &mut task_inner.task_cx as *mut TaskContext;
+    drop(task_inner);
+    drop(task);
+    schedule(task_cx_ptr);
+}
+
+pub fn exit_and_yield(exit_code: i32) {
+    let task = take_current_task().unwrap();
+    let mut inner = task.inner_exclusive_access();
+    let task_cx_ptr = &mut inner.task_cx as *mut TaskContext;
+    inner.task_status = TaskStatus::Zombie;
+    inner.exit_code = exit_code;
+    drop(inner);
+    drop(task);
+    schedule(task_cx_ptr);
+}
+
 // Suspend the current 'Running' task and run the next task in task list.
-pub fn suspend_current_and_run_next() {
+pub fn suspend_and_run_next() {
     // There must be an application running.
     let task = take_current_task().unwrap();
 
@@ -48,7 +68,7 @@ pub fn suspend_current_and_run_next() {
 pub const IDLE_PID: usize = 0;
 
 // Exit the current 'Running' task and run the next task in task list.
-pub fn exit_current_and_run_next(exit_code: i32) {
+pub fn exit_and_run_next(exit_code: i32) {
     // take from Processor
     let task = take_current_task().unwrap();
 
@@ -66,6 +86,7 @@ pub fn exit_current_and_run_next(exit_code: i32) {
             // shutdown(false)
         }
     }
+
     // **** access current TCB exclusively
     let mut inner = task.inner_exclusive_access();
     // Change status to Zombie
@@ -73,7 +94,6 @@ pub fn exit_current_and_run_next(exit_code: i32) {
     // Record exit code
     inner.exit_code = exit_code;
     // do not move to its parent but under initproc
-
     // ++++++ access initproc TCB exclusively
     {
         let mut initproc_inner = INITPROC.inner_exclusive_access();
@@ -98,7 +118,7 @@ pub fn exit_current_and_run_next(exit_code: i32) {
 
 lazy_static! {
     pub static ref INITPROC: Arc<TaskControlBlock> = Arc::new(TaskControlBlock::new(
-        get_app_data_by_name("hello_world").unwrap()
+        get_app_data_by_name("initproc").unwrap()
     ));
 }
 

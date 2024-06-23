@@ -32,20 +32,7 @@ pub struct TCBInner {
     pub exit_code: i32,
 }
 
-impl TCBInner {
-    pub fn get_trap_cx(&self) -> &'static mut TrapContext {
-        self.trap_cx_ppn.get_mut()
-    }
-    pub fn get_user_token(&self) -> usize {
-        self.usr_mem.satp()
-    }
-    fn get_status(&self) -> TaskStatus {
-        self.task_status
-    }
-    pub fn is_zombie(&self) -> bool {
-        self.get_status() == TaskStatus::Zombie
-    }
-}
+
 
 impl TaskControlBlock {
     pub fn inner_exclusive_access(&self) -> RefMut<'_, TCBInner> {
@@ -161,6 +148,21 @@ impl TaskControlBlock {
     }
     pub fn getpid(&self) -> usize {
         self.pid.0
+    }
+}
+
+impl TCBInner {
+    pub fn get_trap_cx(&self) -> &'static mut TrapContext {
+        self.trap_cx_ppn.get_mut()
+    }
+    pub fn get_user_token(&self) -> usize {
+        self.usr_mem.satp()
+    }
+    fn get_status(&self) -> TaskStatus {
+        self.task_status
+    }
+    pub fn is_zombie(&self) -> bool {
+        self.get_status() == TaskStatus::Zombie
     }
 }
 

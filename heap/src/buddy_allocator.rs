@@ -37,7 +37,6 @@ impl BuddyAllocator {
 
     // Add a range of memory [start, end) to the heap
     pub unsafe fn add_to_heap(&mut self, mut start: usize, mut end: usize) {
-        // avoid unaligned access on some platforms
         let unit = size_of::<usize>();
         start = (start + unit - 1) & (!unit + 1);
         end &= !unit + 1;
@@ -48,17 +47,6 @@ impl BuddyAllocator {
             self.free_list[level].push(start as *mut usize);
             start += 1 << level;
         }
-        // while current_start < end {
-        //     let lowbit = current_start & (!current_start + 1);
-        //     let num = end - current_start;
-        //     let size = min(lowbit, 1 << (usize::BITS as usize - num.leading_zeros() as usize - 1));
-        //     total += size;
-        //
-        //     self.free_list[size.trailing_zeros() as usize].push(current_start as *mut usize);
-        //     current_start += size;
-        // }
-        // assert_eq!(total, end - start, "Total is not equal to end - start!");
-        // self.total += total;
     }
 
 
@@ -69,39 +57,20 @@ impl BuddyAllocator {
             layout.size().next_power_of_two(),
             max(layout.align(), size_of::<usize>()),
         );
-        let class = size.trailing_zeros() as usize;
-        for i in class..self.free_list.len() {
-            // Find the first non-empty size class
+        let level = size.trailing_zeros() as usize;
+        for i in level..self.free_list.len() {
             if !self.free_list[i].is_empty() {
-                // Split buffers
-                for j in (class + 1..i + 1).rev() {
-                    if let Some(block) = self.free_list[j].pop() {
-                        unsafe {
-                            self.free_list[j - 1]
-                                .push((block as usize + (1 << (j - 1))) as *mut usize);
-                            self.free_list[j - 1].push(block);
-                        }
-                    } else {
-                        panic!("buddy allocator: block split failed");
-                    }
-                }
+                self.split(level, i);
+                let result = self.free_list[level]
+                    .pop()
+                    .expect("[buddy_allocator] current block should have free space now");
 
-                let result = core::ptr::NonNull::new(
-                    self.free_list[class]
-                        .pop()
-                        .expect("current block should have free space now")
-                        as *mut u8,
-                );
-                if let Some(result) = result {
-                    self.user += layout.size();
-                    self.allocated += size;
-                    return result.as_ptr();
-                } else {
-                    panic!("buddy allocator: block split failed");
-                }
+                self.user += layout.size();
+                self.allocated += size;
+                return result as *mut u8;
             }
         }
-        panic!("buddy allocator: out of memory");
+        panic!("[buddy allocator] out of memory when alloc size {}",size);
     }
 
     // Dealloc a range of memory from the heap
@@ -110,41 +79,42 @@ impl BuddyAllocator {
             layout.size().next_power_of_two(),
             max(layout.align(), size_of::<usize>()),
         );
-        let class = size.trailing_zeros() as usize;
+        let level = size.trailing_zeros() as usize;
+        self.merge(level, ptr);
+    }
 
-        unsafe {
-            // Put back into free list
-            self.free_list[class].push(ptr as *mut usize);
+    fn split(&mut self, start: usize, end: usize) {
+        for i in (start..end).rev() {
+            let ptr = self.free_list[i + 1]
+                .pop()
+                .expect("[buddy_allocator] current block should have free space now");
 
-            // Merge free buddy lists
-            let mut current_ptr = ptr as usize;
-            let mut current_class = class;
-
-            while current_class < self.free_list.len() - 1 {
-                let buddy = current_ptr ^ (1 << current_class);
-                let mut flag = false;
-                for block in self.free_list[current_class].iter_mut() {
-                    if block.value() == buddy {
-                        block.pop();
-                        flag = true;
-                        break;
-                    }
-                }
-
-                // Free buddy found
-                if flag {
-                    self.free_list[current_class].pop();
-                    current_ptr = min(current_ptr, buddy);
-                    current_class += 1;
-                    self.free_list[current_class].push(current_ptr as *mut usize);
-                } else {
-                    break;
-                }
+            // split into 2 parts
+            unsafe {
+                self.free_list[i].push((ptr as usize + (1 << i)) as *mut usize);
+                self.free_list[i].push(ptr);
             }
         }
+    }
 
-        self.user -= layout.size();
-        self.allocated -= size;
+    fn merge(&mut self, start: usize, ptr: *mut u8) {
+        let mut curr = ptr as usize;
+        for i in start..self.free_list.len() {
+            let buddy = curr ^ (1 << i);
+            let target = self.free_list[i]
+                .iter_mut()
+                .find(|node| node.ptr() as usize == buddy);
+
+            if let Some(node) = target {
+                node.pop();
+                curr = min(curr, buddy);
+            } else {
+                unsafe {
+                    self.free_list[i].push(curr as *mut usize);
+                }
+                break;
+            }
+        }
     }
 }
 

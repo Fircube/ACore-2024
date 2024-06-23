@@ -29,7 +29,7 @@ use io::uart::UART;
 use riscv::register::*;
 use mm::frame_allocator::init_frame_allocator;
 use mm::memory_set::activate_page_table;
-use crate::task::loader;
+use crate::task::{INITPROC, loader};
 use crate::task::processor::run_tasks;
 
 // avoid confusing names
@@ -49,7 +49,6 @@ pub fn rust_main() {
 
     println!("[kernel] init task");
     task::add_initproc();
-
     // trap::init();
     // trap::enable_timer_interrupt();
     loader::list_apps();

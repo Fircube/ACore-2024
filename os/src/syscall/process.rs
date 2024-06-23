@@ -1,21 +1,19 @@
-use crate::task::{
-    exit_current_and_run_next,
-    suspend_current_and_run_next,
-};
+use crate::task::{exit_and_yield, exit_and_run_next, suspend_and_yield, suspend_and_run_next};
 use crate::task::manager::add_task;
 // use crate::timer::get_time_ms;
 use alloc::sync::Arc;
 use crate::mm::page_table::{translated_refmut, translated_str};
+use crate::println;
 use crate::task::loader::get_app_data_by_name;
-use crate::task::processor::{current_task, current_user_satp};
+use crate::task::processor::{curr_task, current_user_satp};
 
 pub fn sys_exit(exit_code: i32) -> ! {
-    exit_current_and_run_next(exit_code);
+    exit_and_run_next(exit_code);
     panic!("Unreachable in sys_exit!");
 }
 
 pub fn sys_yield() -> isize {
-    suspend_current_and_run_next();
+    suspend_and_run_next();
     0
 }
 
@@ -23,13 +21,13 @@ pub fn sys_yield() -> isize {
 //     get_time_ms() as isize
 // }
 
-pub fn sys_getpid() -> isize {
-    current_task().unwrap().pid.0 as isize
-}
+// pub fn sys_getpid() -> isize {
+//     current_task().unwrap().pid.0 as isize
+// }
 
 pub fn sys_fork() -> isize {
-    let current_task = current_task().unwrap();
-    let new_task = current_task.fork();
+    let curr_task = curr_task().unwrap();
+    let new_task = curr_task.fork();
     let new_pid = new_task.pid.0;
     // modify trap context of new_task, because it returns immediately after switching
     let trap_cx = new_task.inner_exclusive_access().get_trap_cx();
@@ -38,6 +36,7 @@ pub fn sys_fork() -> isize {
     trap_cx.regs[10] = 0;
     // add new task to scheduler
     add_task(new_task);
+    println!("[syscall] fork a pid {} process", new_pid);
     new_pid as isize
 }
 
@@ -45,7 +44,8 @@ pub fn sys_exec(path: *const u8) -> isize {
     let token = current_user_satp();
     let path = translated_str(token, path);
     if let Some(data) = get_app_data_by_name(path.as_str()) {
-        let task = current_task().unwrap();
+        println!("[syscall] exec");
+        let task = curr_task().unwrap();
         task.exec(data);
         0
     } else {
@@ -54,7 +54,7 @@ pub fn sys_exec(path: *const u8) -> isize {
 }
 
 pub fn sys_waitpid(pid: isize, exit_code_ptr: *mut i32) -> isize {
-    let task = current_task().unwrap();
+    let task = curr_task().unwrap();
     // find a child process
 
     // ---- access current TCB exclusively
