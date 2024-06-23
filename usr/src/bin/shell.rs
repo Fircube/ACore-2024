@@ -15,6 +15,10 @@ pub fn main() {
     loop {
         print!(">> ");
         let str = usr_lib::console::Stdin::getshell();
+        if str.is_empty() {
+            println!(" ");
+            continue;
+        }
         let fork_pid = fork();
         if fork_pid == 0 {
             if exec(str.as_str()) == -1 {

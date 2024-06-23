@@ -3,14 +3,14 @@ use crate::buddy_allocator::BuddyAllocator;
 use crate::temp_mut::TempMut;
 
 
-pub struct LockedHeap {
+pub struct LockedBuddyHeap {
     pub allocator: TempMut<BuddyAllocator>,
 }
 
-impl LockedHeap {
-    pub const fn new() -> Self {
+impl LockedBuddyHeap {
+    pub const fn new(unit: usize) -> Self {
         Self {
-            allocator: TempMut::new(BuddyAllocator::empty()),
+            allocator: TempMut::new(BuddyAllocator::empty(unit)),
         }
     }
 
@@ -19,7 +19,7 @@ impl LockedHeap {
     }
 }
 
-unsafe impl GlobalAlloc for LockedHeap {
+unsafe impl GlobalAlloc for LockedBuddyHeap {
     unsafe fn alloc(&self, layout: core::alloc::Layout) -> *mut u8 {
         self.allocator.inner.borrow_mut().alloc(layout)
     }

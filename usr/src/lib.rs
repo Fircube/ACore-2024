@@ -13,12 +13,12 @@ mod config;
 use syscall::*;
 
 use heap::heap_allocator::*;
-use crate::config::USER_HEAP_SIZE;
+use crate::config::{USER_HEAP_SIZE, USER_HEAP_UNIT};
 
 static mut USER_HEAP: [u8; USER_HEAP_SIZE] = [0; USER_HEAP_SIZE];
 
 #[global_allocator]
-static HEAP: LockedHeap = unsafe { LockedHeap::new() };
+static HEAP: LockedBuddyHeap = unsafe { LockedBuddyHeap::new(USER_HEAP_UNIT) };
 
 #[no_mangle]
 #[link_section = ".text.entry"]

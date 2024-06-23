@@ -1,6 +1,5 @@
 use super::linked_list::LinkedList;
 use core::cmp::{max, min};
-use core::mem::size_of;
 use alloc::alloc::Layout;
 
 
@@ -10,12 +9,13 @@ pub struct BuddyAllocator {
     user: usize,
     allocated: usize,
     total: usize,
+    unit: usize,
 }
 
 impl BuddyAllocator {
     // Create a new heap
-    pub unsafe fn new(start: usize, end: usize) -> Self {
-        let mut new_allocator = Self::empty();
+    pub unsafe fn new(unit:usize, start: usize, end: usize) -> Self {
+        let mut new_allocator = Self::empty(unit);
         new_allocator.add_to_heap(start, end);
         new_allocator
     }
@@ -26,20 +26,20 @@ impl BuddyAllocator {
     }
 
     // Create an empty heap
-    pub const fn empty() -> Self {
+    pub const fn empty(unit: usize) -> Self {
         Self {
             free_list: [LinkedList::new(); 32],
             user: 0,
             allocated: 0,
             total: 0,
+            unit,
         }
     }
 
     // Add a range of memory [start, end) to the heap
     pub unsafe fn add_to_heap(&mut self, mut start: usize, mut end: usize) {
-        let unit = size_of::<usize>();
-        start = (start + unit - 1) & (!unit + 1);
-        end &= !unit + 1;
+        start = (start + self.unit - 1) & (!self.unit + 1);
+        end &= !self.unit + 1;
         self.total += end - start;
 
         while start < end {
@@ -53,7 +53,7 @@ impl BuddyAllocator {
     pub fn alloc(&mut self, layout: Layout) -> *mut u8 {
         let size = max(
             layout.size().next_power_of_two(),
-            max(layout.align(), size_of::<usize>()),
+            max(layout.align(), self.unit),
         );
         let level = size.trailing_zeros() as usize;
         for i in level..self.free_list.len() {
@@ -75,7 +75,7 @@ impl BuddyAllocator {
     pub fn dealloc(&mut self, ptr: *mut u8, layout: Layout) {
         let size = max(
             layout.size().next_power_of_two(),
-            max(layout.align(), size_of::<usize>()),
+            max(layout.align(), self.unit),
         );
         let level = size.trailing_zeros() as usize;
         self.merge(level, ptr);
