@@ -9,6 +9,7 @@ A simple RISC-V monolithic kernel based on  [rCore-Tutorial-v3](https://github.c
 - Allocator
   - Buddy allocator
   - Frame allocator
+  - SLUB (may have bugs)
 - Page table with SV39
 - Console
 - Message & data transfer
